@@ -388,7 +388,7 @@
 </div>
 
 <main class="in" id="main" aria-live="polite"></main>
-<footer class="in foot">© 2026 BFin Travel by Robinson Borborema. Todos os direitos reservados.</footer>
+<footer class="in foot"><button type="button" class="linkbtn" id="apoioBtn">Apoie o BFin Travel com um Pix</button><br>© 2026 BFin Travel by Robinson Borborema. Todos os direitos reservados. · <a href="privacidade.html" style="color:inherit">Privacidade</a></footer>
 <button type="button" class="fab" id="fab" hidden><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Lançar gasto</button>
 <div id="layer"></div>
 
@@ -705,7 +705,15 @@ var GD = {
     return fetch(url, { method: op.method || "GET", headers: h, body: op.body ? JSON.stringify(op.body) : undefined }).then(function (r) {
       if (r.status === 401) { GD.expirou = true; throw new Error("Sua sessão expirou. Toque em Continuar para entrar de novo."); }
       if (r.status === 429) throw new Error("Muitos pedidos agora. Espere um minuto e tente de novo.");
-      if (r.status === 403) throw new Error("Você não tem permissão para mexer nessa planilha.");
+      if (r.status === 403) return r.text().then(function (t) {
+        var msg = ""; try { var j = JSON.parse(t); msg = (j.error && j.error.message) || ""; } catch (e) { msg = t || ""; }
+        if (/has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(msg + t)) {
+          var api = /sheets/i.test(url) ? "Google Sheets API" : /drive/i.test(url) ? "Google Drive API" : "API do Google";
+          throw new Error("A " + api + " ainda não está ativada no projeto do Google Cloud. Ative-a em APIs e serviços > Biblioteca, espere 2 minutos e recarregue.");
+        }
+        if (/insufficient|scope/i.test(msg)) throw new Error("Faltou autorizar o acesso aos arquivos do Drive. Toque em Sair e entre de novo marcando a caixa do Google Drive.");
+        throw new Error("Você não tem permissão para mexer nessa planilha." + (msg ? " (Google: " + msg + ")" : ""));
+      });
       if (r.status === 404) throw new Error("Planilha não encontrada. Ela pode ter sido apagada ou o acesso foi retirado.");
       if (!r.ok) throw new Error("O Google respondeu com erro (" + r.status + "). Tente de novo.");
       return r.status === 204 ? null : r.text().then(function (t) { return t ? JSON.parse(t) : null; });
@@ -938,6 +946,53 @@ var pedidoInstalar = null;
 window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); pedidoInstalar = e; var b = $("instalarBtn"); if (b) b.hidden = false; });
 window.addEventListener("appinstalled", function () { var b = $("instalarBtn"); if (b) b.hidden = true; toast("BFin Travel instalado"); });
 if ("serviceWorker" in navigator && location.protocol === "https:") { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }
+
+/* ---------- Apoio por Pix e links de parceiros ---------- */
+var APOIO = { chave: "e7b51556-e54d-47bc-975b-43610cd9c1d4", nome: "Robinson Borborema", cidade: "CUIABA" };
+/* Links de afiliado: preencha "url" quando o programa aprovar. Sem url, o item não aparece. */
+var PARCEIROS = [
+  { nome: "Hospedagem", desc: "Compare hotéis e pousadas", url: "" },
+  { nome: "Passagens", desc: "Voos e ônibus", url: "" },
+  { nome: "Seguro-viagem", desc: "Viaje com tranquilidade", url: "" },
+  { nome: "Aluguel de carro", desc: "Retire no destino", url: "" }
+];
+function crc16(s) { var c = 0xFFFF; for (var i = 0; i < s.length; i++) { c ^= s.charCodeAt(i) << 8; for (var j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF; } return ("0000" + c.toString(16).toUpperCase()).slice(-4); }
+function tlv(id, v) { return id + ("0" + v.length).slice(-2) + v; }
+function pixCopiaECola() {
+  var conta = tlv("00", "BR.GOV.BCB.PIX") + tlv("01", APOIO.chave);
+  var p = tlv("00", "01") + tlv("26", conta) + tlv("52", "0000") + tlv("53", "986") + tlv("58", "BR") + tlv("59", APOIO.nome.slice(0, 25)) + tlv("60", APOIO.cidade.slice(0, 15)) + tlv("62", tlv("05", "***")) + "6304";
+  return p + crc16(p);
+}
+function copiar(texto, aviso) {
+  var ok = function () { toast(aviso); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(ok, function () { toast("Não consegui copiar. Segure e copie o texto."); });
+  else { var t = document.createElement("textarea"); t.value = texto; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); ok(); } catch (e) { toast("Não consegui copiar."); } t.remove(); }
+}
+function abrirApoio() {
+  var sh = folha("Apoie o BFin Travel");
+  sh.appendChild(el("p", "hint", "O BFin Travel é gratuito. Se ele te ajudou na viagem, você pode apoiar com qualquer valor por Pix. Isso ajuda a manter e melhorar o app."));
+  var c = el("div", "acc"); c.appendChild(el("b", null, "Chave Pix (aleatória)"));
+  var k = el("p", "hint", APOIO.chave); k.style.wordBreak = "break-all"; k.style.userSelect = "all"; c.appendChild(k);
+  var b1 = el("button", "btn", "Copiar chave Pix"); b1.type = "button"; b1.style.justifySelf = "start"; b1.onclick = function () { copiar(APOIO.chave, "Chave Pix copiada"); }; c.appendChild(b1);
+  var b2 = el("button", "btn", "Copiar Pix copia e cola"); b2.type = "button"; b2.style.justifySelf = "start"; b2.onclick = function () { copiar(pixCopiaECola(), "Pix copia e cola copiado"); }; c.appendChild(b2);
+  c.appendChild(el("p", "hint", "No app do seu banco, escolha Pix e cole. O nome que aparece é " + APOIO.nome + "."));
+  sh.appendChild(c);
+  sh.appendChild(el("p", "hint", "Obrigado! Apoiar é totalmente opcional."));
+}
+function cardParceiros() {
+  var lista = PARCEIROS.filter(function (p) { return p.url; });
+  if (!lista.length) return null;
+  var c = el("div", "card"); c.style.marginTop = "16px";
+  var h = el("h2", null, "Parceiros de viagem"); h.appendChild(el("small", null, "links de parceiros")); c.appendChild(h);
+  var g = el("div", "explore");
+  lista.forEach(function (p) {
+    var a = el("a", "exp"); a.href = p.url; a.target = "_blank"; a.rel = "noopener noreferrer sponsored";
+    var t = el("div"); t.appendChild(el("b", null, p.nome)); t.appendChild(el("span", "hint", p.desc)); a.appendChild(t); a.appendChild(el("span", "hint", "↗")); g.appendChild(a);
+  });
+  c.appendChild(g);
+  c.appendChild(el("p", "hint", "Ao comprar por esses links, o BFin Travel pode receber uma comissão, sem custo extra para você."));
+  return c;
+}
 
 /* ---------- Armazenamento ----------
    Três modos, com a mesma interface para o resto da página:
@@ -1665,6 +1720,7 @@ function renderDicas(main, v) {
   });
   c.appendChild(g);
   main.appendChild(c);
+  var par = cardParceiros(); if (par) main.appendChild(par);
 
   // Meus lugares
   var cl = el("div", "card"); cl.style.marginTop = "16px";
@@ -2172,6 +2228,7 @@ function abrirConta() {
 }
 $("contaBtn").onclick = abrirConta;
 if ($("instalarBtn")) $("instalarBtn").onclick = function () { if (!pedidoInstalar) return; pedidoInstalar.prompt(); pedidoInstalar.userChoice.then(function () { pedidoInstalar = null; $("instalarBtn").hidden = true; }); };
+if ($("apoioBtn")) $("apoioBtn").onclick = abrirApoio;
 
 /* Tema: automático, claro ou escuro (preferência guardada neste navegador) */
 var temaHost = document.documentElement.getAttribute("data-theme");
