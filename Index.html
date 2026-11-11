@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
+<meta name="build" content="20261110-215622">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -354,6 +355,7 @@
   .apoio { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-color: var(--accent); background: linear-gradient(135deg, rgba(100,214,189,0.14), transparent 70%), var(--surface); }
   .apoiotx { display: grid; gap: 4px; flex: 1 1 220px; }
   .foot { display: grid; justify-items: center; }
+  .updbar { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--accent); box-shadow: 0 12px 40px rgba(0,0,0,0.4); font-weight: 700; font-size: 14px; max-width: 520px; margin-inline: auto; }
   .plink { color: var(--accent); font-weight: 700; font-size: 14px; text-decoration: none; }
   body { margin: 0; }
 </style>
@@ -1005,6 +1007,33 @@ function cardApoio() {
   var b = el("button", "btn solid", "♥ Apoiar com Pix"); b.type = "button"; b.onclick = abrirApoio; c.appendChild(b);
   return c;
 }
+
+/* ---------- Aviso de nova versão ---------- */
+var BUILD = "20261110-215622";
+var avisouVersao = false;
+function checarVersao() {
+  if (avisouVersao || location.protocol !== "https:") return;
+  fetch("index.html?c=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
+    var m = t.match(/<meta name="build" content="([^"]+)"/);
+    if (!m || m[1] === BUILD) return;
+    avisouVersao = true;
+    var b = el("div", "updbar"); b.setAttribute("role", "status");
+    b.appendChild(el("span", null, "Nova versão do BFin Travel disponível."));
+    var bt = el("button", "btn solid", "Atualizar"); bt.type = "button";
+    bt.onclick = function () {
+      bt.disabled = true; bt.textContent = "Atualizando…";
+      var fim = function () { location.replace(location.pathname + "?v=" + encodeURIComponent(m[1])); };
+      var p = [];
+      if ("caches" in window) p.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }));
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) p.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+      Promise.all(p).then(fim, fim);
+    };
+    b.appendChild(bt); document.body.appendChild(b);
+  }).catch(function () {});
+}
+setTimeout(checarVersao, 2500);
+document.addEventListener("visibilitychange", function () { if (!document.hidden) checarVersao(); });
+setInterval(checarVersao, 300000);
 
 /* ---------- Armazenamento ----------
    Três modos, com a mesma interface para o resto da página:
