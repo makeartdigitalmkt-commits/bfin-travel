@@ -351,6 +351,9 @@
   .gbtn { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; padding: 0 22px; border-radius: 999px; border: 1px solid var(--line); background: #ffffff; color: #1f1f1f; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: var(--glow); width: 100%; max-width: 340px; }
   .gbtn:disabled { opacity: 0.7; cursor: progress; }
   .loginfo { display: grid; gap: 4px; text-align: left; margin-top: 6px; }
+  .apoio { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-color: var(--accent); background: linear-gradient(135deg, rgba(100,214,189,0.14), transparent 70%), var(--surface); }
+  .apoiotx { display: grid; gap: 4px; flex: 1 1 220px; }
+  .foot { display: grid; justify-items: center; }
   .plink { color: var(--accent); font-weight: 700; font-size: 14px; text-decoration: none; }
   body { margin: 0; }
 </style>
@@ -388,7 +391,7 @@
 </div>
 
 <main class="in" id="main" aria-live="polite"></main>
-<footer class="in foot"><button type="button" class="linkbtn" id="apoioBtn">Apoie o BFin Travel com um Pix</button><br>© 2026 BFin Travel by Robinson Borborema. Todos os direitos reservados. · <a href="privacidade.html" style="color:inherit">Privacidade</a></footer>
+<footer class="in foot"><button type="button" class="btn solid" id="apoioBtn">♥ Apoie o BFin Travel com um Pix</button><br><br>© 2026 BFin Travel by Robinson Borborema. Todos os direitos reservados. · <a href="privacidade.html" style="color:inherit">Privacidade</a></footer>
 <button type="button" class="fab" id="fab" hidden><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Lançar gasto</button>
 <div id="layer"></div>
 
@@ -993,6 +996,15 @@ function cardParceiros() {
   c.appendChild(el("p", "hint", "Ao comprar por esses links, o BFin Travel pode receber uma comissão, sem custo extra para você."));
   return c;
 }
+function cardApoio() {
+  var c = el("div", "card apoio");
+  var t = el("div", "apoiotx");
+  t.appendChild(el("b", null, "Gostou do BFin Travel?"));
+  t.appendChild(el("span", "hint", "O app é gratuito. Se ele te ajudou na viagem, você pode apoiar com qualquer valor por Pix."));
+  c.appendChild(t);
+  var b = el("button", "btn solid", "♥ Apoiar com Pix"); b.type = "button"; b.onclick = abrirApoio; c.appendChild(b);
+  return c;
+}
 
 /* ---------- Armazenamento ----------
    Três modos, com a mesma interface para o resto da página:
@@ -1241,6 +1253,7 @@ function render() {
   else if (aba === "gastos") renderGastos(main, v);
   else if (aba === "orcamento") renderOrcamento(main, v);
   else renderDicas(main, v);
+  if (aba === "painel") main.appendChild(cardApoio());
 }
 
 function renderTopo(v) {
