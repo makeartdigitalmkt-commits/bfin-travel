@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261110-215622">
+<meta name="build" content="20261110-230750">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -344,6 +344,38 @@
   .paysplit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 420px) { .paysplit { grid-template-columns: minmax(0, 1fr); } }
   .item .edit { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); color: var(--accent); }
+
+  /* Etapas da viagem e escolha do que o valor cobre */
+  .secao { display: flex; gap: 12px; align-items: flex-start; margin: 22px 0 4px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .sheet h3 + .secao { border-top: 0; padding-top: 0; margin-top: 6px; }
+  .secao i { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: 14px; background: var(--accent); color: var(--accent-ink); box-shadow: var(--glow); }
+  .secao b { display: block; font-size: 17px; }
+  .secao small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .cob { display: grid; gap: 8px; margin-top: 4px; }
+  .cob .lbl { margin-top: 8px; }
+  .vaigrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 520px) { .vaigrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .vchip { display: grid; justify-items: center; gap: 6px; padding: 12px 6px; min-height: 76px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: center; line-height: 1.2; }
+  .vchip[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); background: linear-gradient(160deg, rgba(100, 214, 189, 0.18), transparent 70%), var(--surface-2); box-shadow: var(--glow); }
+  .vchip[aria-pressed="true"] svg { color: var(--accent); }
+  .cobgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 520px) { .cobgrid { grid-template-columns: 1fr; } }
+  .ctile { position: relative; display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px; min-height: 64px; border-radius: 16px; border: 1px dashed var(--line); background: transparent; color: var(--ink); font: inherit; cursor: pointer; opacity: 0.75; }
+  .ctile.on { opacity: 1; border-style: solid; border-color: var(--accent); background: linear-gradient(160deg, rgba(100, 214, 189, 0.14), transparent 70%), var(--surface-2); }
+  .ctile.lock { cursor: default; border-color: var(--line); background: var(--surface-2); }
+  .ctile .ctx { display: grid; gap: 2px; flex: 1; min-width: 0; }
+  .ctile .ctx b { font-size: 14px; }
+  .ctile .ctx small { font-size: 12px; color: var(--muted); }
+  .ctile.on:not(.lock) .ctx small { color: var(--accent); font-weight: 700; }
+  .ccheck { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+  .ctile.on .ccheck { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .cobres { margin: 2px 0 0; padding: 10px 14px; border-radius: 12px; background: rgba(100, 214, 189, 0.1); font-size: 14px; }
+  .cobres b { color: var(--accent); }
+  .togrow { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+  .togrow small { color: var(--muted); font-weight: 600; }
+  .togrow i { margin-left: auto; font-style: normal; font-size: 20px; transition: transform 0.2s; }
+  .togrow[aria-expanded="true"] i { transform: rotate(90deg); }
+  .pgwrap { display: grid; gap: 8px; margin-top: 8px; }
 
   /* Entrada do app */
   .login { max-width: 520px; margin: 24px auto; display: grid; gap: 14px; justify-items: center; text-align: center; padding: 36px 28px; }
@@ -1009,7 +1041,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261110-215622";
+var BUILD = "20261110-230750";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1206,19 +1238,93 @@ function viagemAtual() { return Store.viagens.filter(function (v) { return v.id 
 /* escopo "tudo": o orçamento cobre passagens, hospedagem e gastos no destino.
    escopo "destino": só os gastos no destino; passagens e hospedagem ficam à parte. */
 var FIXAS = ["transporte", "hospedagem"];
-function soDestino(v) { return v.escopo === "destino"; }
-function catsOrc(v) { return soDestino(v) ? CATS.filter(function (c) { return FIXAS.indexOf(c.id) < 0; }) : CATS; }
+/* O que o valor cobre: ida e volta (transporte até o destino) e hospedagem podem ficar dentro ou à parte.
+   Viagens antigas usam "escopo": "tudo" = as duas dentro; "destino" = as duas à parte. */
+function cobre(v) {
+  if (v && v.cobre) return { ida: v.cobre.ida !== false, hosp: v.cobre.hosp !== false };
+  return v && v.escopo === "destino" ? { ida: false, hosp: false } : { ida: true, hosp: true };
+}
+function foraOrc(v) { var c = cobre(v), f = []; if (!c.ida) f.push("transporte"); if (!c.hosp) f.push("hospedagem"); return f; }
+function fora(v, id) { return foraOrc(v).indexOf(id) >= 0; }
+function soDestino(v) { return foraOrc(v).length > 0; }
+function catsOrc(v) { return CATS.filter(function (c) { return !fora(v, c.id); }); }
 function pctPadrao(v, c) {
   if (!soDestino(v)) return c.pct;
-  if (FIXAS.indexOf(c.id) >= 0) return 0;
-  var base = 0; CATS.forEach(function (x) { if (FIXAS.indexOf(x.id) < 0) base += x.pct; });
+  if (fora(v, c.id)) return 0;
+  var base = 0; CATS.forEach(function (x) { if (!fora(v, x.id)) base += x.pct; });
   return c.pct * 100 / base;
+}
+/* Como vai até o destino: muda o nome e o ícone da categoria de ida e volta. */
+var VAI = {
+  aviao: { nome: "Avião", cat: "Passagens aéreas", ic: '<path d="M2 16l20-6-20-6 3 6-3 6zm3-6h9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>' },
+  onibus: { nome: "Ônibus", cat: "Passagens de ônibus", ic: '<rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5 11h14M8 18v3M16 18v3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="8.5" cy="14.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="14.5" r="1.2" fill="currentColor"/>' },
+  carro: { nome: "Carro próprio", cat: "Combustível e pedágio", ic: '<path d="M3 15l2-6a2 2 0 0 1 2-1.5h10a2 2 0 0 1 2 1.5l2 6v4H3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="7.5" cy="15.5" r="1.4" fill="currentColor"/><circle cx="16.5" cy="15.5" r="1.4" fill="currentColor"/>' },
+  alugado: { nome: "Carro alugado", cat: "Aluguel de carro e combustível", ic: '<path d="M3 15l2-6a2 2 0 0 1 2-1.5h10a2 2 0 0 1 2 1.5l2 6v4H3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M15 4.5h5M17.5 2v5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="7.5" cy="15.5" r="1.4" fill="currentColor"/><circle cx="16.5" cy="15.5" r="1.4" fill="currentColor"/>' },
+  outro: { nome: "Outro", cat: "Ida e volta", ic: '<path d="M4 12h16M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>' }
+};
+var IC_TRANSP = CATS[0].ic;
+function ajustarCats(v) {
+  var x = v && VAI[v.vai];
+  CAT.transporte.nome = x ? x.cat : "Passagens";
+  CAT.transporte.ic = x ? x.ic : IC_TRANSP;
+}
+function textoCobre(v) {
+  var c = cobre(v), x = VAI[v.vai], p = [];
+  if (c.ida) p.push((x ? x.cat : "passagens").toLowerCase());
+  if (c.hosp) p.push("hospedagem");
+  p.push("gastos no destino");
+  return p.join(" + ");
+}
+function textoFora(v) {
+  var x = VAI[v.vai], p = [];
+  if (fora(v, "transporte")) p.push(x ? x.cat : "Passagens");
+  if (fora(v, "hospedagem")) p.push(p.length ? "hospedagem" : "Hospedagem");
+  return p.join(" e ");
+}
+/* Escolha visual: como vai e o que entra no valor. estado = { vai, ida, hosp } */
+function coberturaUI(estado, aoMudar) {
+  var box = el("div", "cob");
+  box.appendChild(el("span", "lbl", "Como você vai até lá?"));
+  var gv = el("div", "vaigrid"); gv.setAttribute("role", "group"); gv.setAttribute("aria-label", "Como vai até o destino");
+  Object.keys(VAI).forEach(function (k) {
+    var b = el("button", "vchip"); b.type = "button"; b.setAttribute("aria-pressed", estado.vai === k ? "true" : "false");
+    b.appendChild(svgIc(VAI[k].ic, 22)); b.appendChild(el("span", null, VAI[k].nome));
+    b.onclick = function () { estado.vai = estado.vai === k ? "" : k; desenhar(); aoMudar(); };
+    gv.appendChild(b);
+  });
+  box.appendChild(gv);
+  box.appendChild(el("span", "lbl", "O que entra no valor que você tem?"));
+  var gc = el("div", "cobgrid"); box.appendChild(gc);
+  var res = el("p", "cobres"); box.appendChild(res);
+  box.appendChild(el("p", "hint", "Desmarque o que já foi pago à parte ou que você não vai ter, como hospedagem quando vai ficar na casa de alguém."));
+  function tile(chave, titulo, icone, cor, travado) {
+    var ligado = travado || estado[chave];
+    var b = el("button", "ctile" + (ligado ? " on" : "") + (travado ? " lock" : "")); b.type = "button";
+    b.setAttribute("aria-pressed", ligado ? "true" : "false"); if (travado) b.disabled = true;
+    var ic = el("span", "cic"); ic.style.background = cor; ic.appendChild(svgIc(icone, 18)); b.appendChild(ic);
+    var tx = el("span", "ctx"); tx.appendChild(el("b", null, titulo)); tx.appendChild(el("small", null, travado ? "Sempre incluído" : ligado ? "Incluído no valor" : "Fica à parte")); b.appendChild(tx);
+    b.appendChild(el("span", "ccheck", ligado ? "✓" : ""));
+    if (!travado) b.onclick = function () { estado[chave] = !estado[chave]; desenhar(); aoMudar(); };
+    return b;
+  }
+  function desenhar() {
+    Array.prototype.forEach.call(gv.children, function (b, i) { b.setAttribute("aria-pressed", Object.keys(VAI)[i] === estado.vai ? "true" : "false"); });
+    gc.textContent = "";
+    var x = VAI[estado.vai];
+    gc.appendChild(tile("ida", x ? x.cat : "Ida e volta", x ? x.ic : IC_TRANSP, catColor("transporte")));
+    gc.appendChild(tile("hosp", "Hospedagem", CAT.hospedagem.ic, catColor("hospedagem")));
+    gc.appendChild(tile("dest", "Gastos no destino", CAT.restaurante.ic, catColor("restaurante"), true));
+    var tmp = { vai: estado.vai, cobre: { ida: estado.ida, hosp: estado.hosp } };
+    res.textContent = ""; res.appendChild(el("span", null, "Seu valor cobre: ")); res.appendChild(el("b", null, textoCobre(tmp) + "."));
+  }
+  desenhar();
+  return box;
 }
 function modoOrc(v) { return v.orcModo || (v.orcCat ? "valor" : "auto"); }
 function orcCat(v) {
   var m = modoOrc(v), o = {};
   CATS.forEach(function (c) {
-    var fixa = soDestino(v) && FIXAS.indexOf(c.id) >= 0;
+    var fixa = fora(v, c.id);
     if (fixa || m === "total") o[c.id] = 0;
     else if (m === "valor" && v.orcCat && typeof v.orcCat[c.id] === "number") o[c.id] = v.orcCat[c.id];
     else if (m === "pct" && v.orcPct && typeof v.orcPct[c.id] === "number") o[c.id] = Math.round((v.orcamento || 0) * v.orcPct[c.id]) / 100;
@@ -1230,11 +1336,11 @@ function resumo(v) {
   var dias = Math.max(1, difDias(v.ida, v.volta) + 1);
   var h = hoje();
   var passados = h < v.ida ? 0 : h > v.volta ? dias : difDias(v.ida, h) + 1;
-  var total = 0, antes = 0, durante = 0, fora = 0, porCat = {}, porDia = {};
+  var total = 0, antes = 0, durante = 0, forav = 0, porCat = {}, porDia = {};
   CATS.forEach(function (c) { porCat[c.id] = 0; });
   Store.gastos.forEach(function (g) {
     var x = g.valorBRL || 0; porCat[g.categoria] = (porCat[g.categoria] || 0) + x;
-    if (soDestino(v) && FIXAS.indexOf(g.categoria) >= 0) { fora += x; return; }
+    if (fora(v, g.categoria)) { forav += x; return; }
     total += x;
     if (g.data < v.ida) antes += x; else if (g.data <= v.volta) { durante += x; porDia[g.data] = porDia[g.data] || {}; porDia[g.data][g.categoria] = (porDia[g.data][g.categoria] || 0) + x; } else durante += x;
   });
@@ -1246,13 +1352,14 @@ function resumo(v) {
   var porDiaLivre = restantes > 0 ? resta / restantes : resta;
   var fase = h < v.ida ? "antes" : h > v.volta ? "depois" : "durante";
   return { dias: dias, passados: passados, restantes: restantes, total: total, antes: antes, durante: durante, porCat: porCat, porDia: porDia,
-    media: media, projecao: projecao, orc: orc, resta: resta, porDiaLivre: porDiaLivre, fase: fase, pct: orc ? total / orc : 0, fora: fora };
+    media: media, projecao: projecao, orc: orc, resta: resta, porDiaLivre: porDiaLivre, fase: fase, pct: orc ? total / orc : 0, fora: forav };
 }
 
 /* ---------- Render ---------- */
 var aba = "painel", filtroCat = "", confirmar = "";
 function render() {
   var v = viagemAtual();
+  ajustarCats(v);
   renderTopo(v);
   var main = $("main"); main.textContent = "";
   $("fab").hidden = !v || !Store.podeEditar() || Store.modo === "login";
@@ -1343,7 +1450,7 @@ function renderPainel(main, v) {
   else if (r.orc && r.pct >= 0.9) alerta("warn", "Você já usou " + Math.round(r.pct * 100) + "% do orçamento.", "Adicionar ao orçamento", function () { abrirAporte(v, 0); });
   var lim0 = v.orcPag || {}, din0 = 0; Store.gastos.forEach(function (g) { if (grupoDe(g) === "dinheiro") din0 += g.valorBRL || 0; });
   if (lim0.dinheiro && din0 > lim0.dinheiro) alerta("bad", "O dinheiro levado acabou: passou " + brl(din0 - lim0.dinheiro) + ".", "Adicionar dinheiro", function () { abrirAporte(v, din0 - lim0.dinheiro, "dinheiro"); });
-  CATS.forEach(function (c) { var prev = oc[c.id] || 0, gasto = r.porCat[c.id] || 0; if (prev && gasto > prev && !(soDestino(v) && FIXAS.indexOf(c.id) >= 0)) alerta("warn", c.nome + " passou " + brl(gasto - prev) + " do previsto.", "Ajustar", function () { abrirAporte(v, gasto - prev, "", c.id); }); });
+  CATS.forEach(function (c) { var prev = oc[c.id] || 0, gasto = r.porCat[c.id] || 0; if (prev && gasto > prev && !fora(v, c.id)) alerta("warn", c.nome + " passou " + brl(gasto - prev) + " do previsto.", "Ajustar", function () { abrirAporte(v, gasto - prev, "", c.id); }); });
   if (alertas.childNodes.length) main.appendChild(alertas);
 
   // Destaque principal
@@ -1354,7 +1461,7 @@ function renderPainel(main, v) {
   esq.appendChild(el("div", "prem-s num", "Gastou " + brl(r.total) + " de " + brl(r.orc) + " · " + Math.round(r.pct * 100) + "% usado"));
   var stack = el("div", "stack"); stack.setAttribute("role", "img");
   var base = Math.max(r.orc, r.total) || 1, partes = [];
-  CATS.forEach(function (c) { var x = soDestino(v) && FIXAS.indexOf(c.id) >= 0 ? 0 : (r.porCat[c.id] || 0); if (!x) return; var s = el("i"); s.style.width = (x / base * 100) + "%"; s.style.background = catColor(c.id); s.title = c.nome + ": " + brl(x); stack.appendChild(s); partes.push(c.nome + " " + brl(x)); });
+  CATS.forEach(function (c) { var x = fora(v, c.id) ? 0 : (r.porCat[c.id] || 0); if (!x) return; var s = el("i"); s.style.width = (x / base * 100) + "%"; s.style.background = catColor(c.id); s.title = c.nome + ": " + brl(x); stack.appendChild(s); partes.push(c.nome + " " + brl(x)); });
   if (r.orc && r.total > r.orc) { var mk = el("b"); mk.style.left = (r.orc / base * 100) + "%"; mk.title = "Limite do orçamento"; stack.appendChild(mk); }
   stack.setAttribute("aria-label", "Gasto por categoria: " + (partes.join(", ") || "nenhum gasto"));
   esq.appendChild(stack);
@@ -1364,7 +1471,7 @@ function renderPainel(main, v) {
   else if (r.projecao !== null) st = el("span", "status good", "No ritmo atual, sobram " + brl(r.orc - r.projecao));
   else st = el("span", "status good", r.fase === "antes" ? "A viagem ainda não começou" : "Dentro do orçamento");
   esq.appendChild(st);
-  if (soDestino(v)) esq.appendChild(el("p", "prem-s num", "Passagens e hospedagem, fora deste orçamento: " + brl(r.fora) + " · custo total da viagem: " + brl(r.total + r.fora)));
+  if (soDestino(v)) esq.appendChild(el("p", "prem-s num", textoFora(v) + ", fora deste orçamento: " + brl(r.fora) + " · custo total da viagem: " + brl(r.total + r.fora)));
   hero.appendChild(esq);
   var dir = el("div", "prem-r");
   function tile(l, val, s, ruim) { var x = el("div", "ptile"); x.appendChild(el("span", "l", l)); x.appendChild(el("span", "v num" + (ruim ? " ruim" : ""), val)); if (s) x.appendChild(el("span", "s", s)); dir.appendChild(x); }
@@ -1382,7 +1489,7 @@ function renderPainel(main, v) {
   var cats = el("div", "cats");
   catsOrc(v).slice().sort(function (a, b) { return (r.porCat[b.id] || 0) - (r.porCat[a.id] || 0); }).forEach(function (c) {
     var gasto = r.porCat[c.id] || 0, prev = oc[c.id] || 0;
-    if (!gasto && !prev) return;
+    if (!gasto) return;
     var row = el("div", "catrow");
     row.appendChild(catIcon(c.id));
     var mid = el("div");
@@ -1395,6 +1502,7 @@ function renderPainel(main, v) {
     row.appendChild(val);
     cats.appendChild(row);
   });
+  if (!cats.children.length) cats.appendChild(el("p", "hint", "Nenhum gasto ainda. As categorias aparecem aqui conforme você lança os gastos. O previsto de cada uma fica na aba Orçamento."));
   c2.appendChild(cats);
   g2.appendChild(c2);
 
@@ -1594,23 +1702,22 @@ function renderGastos(main, v) {
 var escopoTemp = null, modoTemp = null;
 function renderOrcamento(main, vSalva) {
   var v = Object.assign({}, vSalva);
-  if (escopoTemp && escopoTemp !== (vSalva.escopo || "tudo")) { v.escopo = escopoTemp; delete v.orcCat; delete v.orcPct; }
+  if (escopoTemp) {
+    var c0 = cobre(vSalva); v.vai = escopoTemp.vai; v.cobre = { ida: escopoTemp.ida, hosp: escopoTemp.hosp };
+    if (c0.ida !== escopoTemp.ida || c0.hosp !== escopoTemp.hosp) { delete v.orcCat; delete v.orcPct; }
+  }
+  ajustarCats(v);
   if (modoTemp) v.orcModo = modoTemp;
   var modo = modoOrc(v);
   var oc = orcCat(v), r = resumo(v);
   var c = el("div", "card");
   c.appendChild(el("h2", null, "Quanto tenho para gastar"));
-  var f2 = el("div", "f2");
-  var fT = el("div", "f"); var lT = el("label", null, soDestino(v) ? "Para gastar no destino (R$)" : "Orçamento total (R$)"); lT.htmlFor = "orcTotal"; fT.appendChild(lT);
+  var fT = el("div", "f"); var lT = el("label", null, "Tenho para gastar (R$)"); lT.htmlFor = "orcTotal"; fT.appendChild(lT);
   var iT = campoMoeda(document.createElement("input"), v.orcamento || 0); iT.id = "orcTotal"; iT.classList.add("money-sm"); fT.appendChild(iT);
-  f2.appendChild(fT);
-  var fE = el("div", "f");
-  var lE = el("label", null, "Esse valor cobre"); lE.htmlFor = "orcEscopo"; fE.appendChild(lE);
-  var sE = document.createElement("select"); sE.id = "orcEscopo";
-  [["tudo", "Tudo: passagens, hospedagem e gastos lá"], ["destino", "Só os gastos no destino"]].forEach(function (o) { var op = el("option", null, o[1]); op.value = o[0]; sE.appendChild(op); });
-  sE.value = v.escopo || "tudo"; sE.onchange = function () { escopoTemp = sE.value; guardarTotal(); render(); };
-  fE.appendChild(sE); f2.appendChild(fE);
-  c.appendChild(f2);
+  c.appendChild(fT);
+  var cv = cobre(v);
+  var estCob = { vai: v.vai || "", ida: cv.ida, hosp: cv.hosp };
+  c.appendChild(coberturaUI(estCob, function () { guardarTotal(); escopoTemp = { vai: estCob.vai, ida: estCob.ida, hosp: estCob.hosp }; render(); }));
   var totalDigitado = null;
   function guardarTotal() { totalDigitado = valorDe(iT); vSalva._totalTemp = totalDigitado; }
   if (typeof vSalva._totalTemp === "number") iT.value = fmtMoeda(vSalva._totalTemp);
@@ -1624,7 +1731,7 @@ function renderOrcamento(main, vSalva) {
   });
   c.appendChild(seg);
   var expl = { total: "Só o valor total. O painel mostra quanto foi para cada categoria, sem previsão por categoria.",
-    auto: soDestino(v) ? "O sistema divide entre restaurantes, passeios, lazer, mercado, transporte local e outros." : "O sistema divide: passagens 25%, hospedagem 30%, restaurantes 15%, passeios 12%, lazer 6%, mercado 5%, transporte local 5% e outros 2%.",
+    auto: "O sistema divide: " + catsOrc(v).map(function (cat) { return cat.nome.toLowerCase() + " " + (Math.round(pctPadrao(v, cat) * 10) / 10).toLocaleString("pt-BR") + "%"; }).join(", ") + ".",
     pct: "Digite a porcentagem de cada categoria. A soma deve dar 100%.", valor: "Digite quanto quer gastar em cada categoria." }[modo];
   c.appendChild(el("p", "hint", expl));
 
@@ -1694,7 +1801,7 @@ function renderOrcamento(main, vSalva) {
   var mais = el("button", "btn", "+ Adicionar dinheiro ao orçamento"); mais.type = "button"; mais.onclick = function () { abrirAporte(vSalva, 0); };
   salvar.onclick = function () {
     var nv = Object.assign({}, vSalva); delete nv._totalTemp;
-    nv.escopo = v.escopo || "tudo"; nv.orcModo = modo; nv.orcamento = valorDe(iT); nv.orcPag = {};
+    nv.vai = v.vai || ""; nv.cobre = cobre(v); nv.escopo = nv.cobre.ida && nv.cobre.hosp ? "tudo" : "destino"; nv.orcModo = modo; nv.orcamento = valorDe(iT); nv.orcPag = {};
     if (modo === "valor") { nv.orcCat = {}; CATS.forEach(function (cat) { nv.orcCat[cat.id] = inputs[cat.id] ? valorDe(inputs[cat.id]) : 0; }); }
     if (modo === "pct") {
       var s = 0; nv.orcPct = {}; CATS.forEach(function (cat) { var p = inputs[cat.id] ? n0(inputs[cat.id].value, 0) : 0; nv.orcPct[cat.id] = p; s += p; });
@@ -1920,6 +2027,11 @@ function folha(titulo) {
   document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { fecharFolha(); document.removeEventListener("keydown", esc); } });
   return sh;
 }
+function secao(sh, n, titulo, sub) {
+  var s = el("div", "secao"); s.appendChild(el("i", null, String(n)));
+  var tx = el("div"); tx.appendChild(el("b", null, titulo)); if (sub) tx.appendChild(el("small", null, sub)); s.appendChild(tx);
+  sh.appendChild(s); return s;
+}
 function campo(sh, id, rotulo, tipo, valor, extra) {
   var f = el("div", "f"); var l = el("label", null, rotulo); l.htmlFor = id; f.appendChild(l);
   var i = document.createElement(tipo === "select" ? "select" : "input"); i.id = id;
@@ -1936,10 +2048,11 @@ function erroSalvar(e) {
 function abrirViagem(v) {
   if (!Store.podeEditar()) { toast("Você tem acesso só para ver estes dados."); return; }
   var sh = folha(v ? "Editar viagem" : "Nova viagem");
+  secao(sh, 1, "Para onde e quando", "O nome aparece no topo do painel.");
   var iD = campo(sh, "fvDestino", "Nome ou destino da viagem", "text", v ? v.destino : "", { placeholder: "Ex.: Bonito, MS", autocomplete: "off" });
   var iO = campo(sh, "fvOrigem", "Saindo de (opcional)", "text", v ? v.origem || "" : "", { placeholder: "Ex.: Cuiabá", autocomplete: "off" });
   var ida = v ? v.ida : "", volta = v ? v.volta : "", ponta = "ida";
-  sh.appendChild(el("span", "lbl", "Datas da viagem"));
+  sh.appendChild(el("span", "lbl", "Datas da viagem: toque na ida e depois na volta"));
   var dbox = el("div", "dpair");
   var bI = el("button", "dbtn"); bI.type = "button"; var bV = el("button", "dbtn"); bV.type = "button";
   dbox.appendChild(bI); dbox.appendChild(bV); sh.appendChild(dbox);
@@ -1959,26 +2072,37 @@ function abrirViagem(v) {
   bI.onclick = function () { ponta = "ida"; sync(); if (ida) cal.irPara(ida); };
   bV.onclick = function () { ponta = "volta"; sync(); if (volta) cal.irPara(volta); };
   sync();
+  secao(sh, 2, "Como vai e o que o valor cobre", "Assim o painel separa a viagem do que você já pagou à parte.");
+  var c0 = cobre(v || {});
+  var estCob = { vai: v && v.vai ? v.vai : "", ida: c0.ida, hosp: c0.hosp };
+  var cobBox = coberturaUI(estCob, function () { syncLbl(); }); sh.appendChild(cobBox);
+  secao(sh, 3, "Quanto você tem", "Digite só números: 500000 vira 5.000,00.");
   var o = campo(sh, "fvOrc", "Tenho para gastar (R$)", "money", v ? v.orcamento : 0, { placeholder: "0,00" });
-  sh.appendChild(el("span", "lbl", "Como vai pagar (opcional)"));
-  sh.appendChild(el("p", "hint", "Diga quanto desse valor vai em dinheiro, cartão ou Pix. Deixe em branco o que não quiser controlar."));
-  var pg = el("div", "paysplit"); sh.appendChild(pg);
+  var lblCob = el("p", "hint"); sh.appendChild(lblCob);
+  function syncLbl() { lblCob.textContent = "Esse valor cobre: " + textoCobre({ vai: estCob.vai, cobre: { ida: estCob.ida, hosp: estCob.hosp } }) + "."; }
+  syncLbl();
+  var temPag = v && v.orcPag && Object.keys(v.orcPag).length;
+  var tg = el("button", "togrow"); tg.type = "button"; tg.setAttribute("aria-expanded", temPag ? "true" : "false");
+  tg.appendChild(el("span", null, "Dividir por forma de pagamento")); tg.appendChild(el("small", null, "opcional")); tg.appendChild(el("i", null, "›"));
+  sh.appendChild(tg);
+  var pgw = el("div", "pgwrap"); pgw.hidden = !temPag; sh.appendChild(pgw);
+  tg.onclick = function () { pgw.hidden = !pgw.hidden; tg.setAttribute("aria-expanded", pgw.hidden ? "false" : "true"); };
+  pgw.appendChild(el("p", "hint", "Diga quanto desse valor vai em dinheiro, cartão ou Pix. Deixe em branco o que não quiser controlar."));
+  var pg = el("div", "paysplit"); pgw.appendChild(pg);
   var pagIn = {};
   GRUPOS.forEach(function (gr) {
     var f = el("div", "f"); var lb = el("label", null, gr.id === "cartao" ? "Cartão" : gr.nome); lb.htmlFor = "fvPag_" + gr.id; f.appendChild(lb);
     var inp = campoMoeda(document.createElement("input"), v && v.orcPag && v.orcPag[gr.id] ? v.orcPag[gr.id] : 0); inp.id = "fvPag_" + gr.id; inp.placeholder = "0,00";
     f.appendChild(inp); pg.appendChild(f); pagIn[gr.id] = inp;
   });
-  var somaPag = el("p", "hint num"); sh.appendChild(somaPag);
+  var somaPag = el("p", "hint num"); pgw.appendChild(somaPag);
   var syncPag = function () {
     var s = 0; GRUPOS.forEach(function (gr) { s += valorDe(pagIn[gr.id]); });
     var tot = valorDe(o);
     somaPag.textContent = !s ? "" : Math.abs(s - tot) < 0.01 ? "Bate com o valor total." : s < tot ? "Faltam " + brl2(tot - s) + " para chegar ao total (pode ficar como valor geral)." : "Passa " + brl2(s - tot) + " do total.";
   };
   pg.addEventListener("input", syncPag); o.addEventListener("input", syncPag); syncPag();
-  var es = campo(sh, "fvEscopo", "Esse valor cobre", "select");
-  [["tudo", "Tudo: passagens, hospedagem e gastos no destino"], ["destino", "Só os gastos no destino (passagens e hospedagem à parte)"]].forEach(function (x) { var op = el("option", null, x[1]); op.value = x[0]; es.appendChild(op); });
-  es.value = v && v.escopo ? v.escopo : "tudo";
+  secao(sh, 4, "Moeda do destino", "Para viagens fora do Brasil. Os gastos são convertidos para real.");
   var ml = campo(sh, "fvMoeda", "Moeda do destino", "select");
   Object.keys(MOEDAS).forEach(function (k) { var op = el("option", null, MOEDAS[k][0] + " (" + MOEDAS[k][1] + ")"); op.value = k; ml.appendChild(op); });
   ml.value = v && v.moedaLocal ? v.moedaLocal : "BRL";
@@ -1999,8 +2123,8 @@ function abrirViagem(v) {
     if (!dest) { msg.hidden = false; msg.textContent = "Escreva o destino."; iD.focus(); return; }
     if (!ida || !volta) { msg.hidden = false; msg.textContent = "Escolha no calendário o dia da ida e o da volta."; return; }
     var nv = Object.assign({}, v || {}, { id: v ? v.id : novoId("v_"), destino: dest, nome: dest, origem: iO.value.trim(), ida: ida, volta: volta,
-      orcamento: valorDe(o), escopo: es.value, moedaLocal: ml.value, criadoEm: v ? v.criadoEm : new Date().toISOString() });
-    if (v && (v.escopo || "tudo") !== es.value) delete nv.orcCat;
+      orcamento: valorDe(o), vai: estCob.vai, cobre: { ida: estCob.ida, hosp: estCob.hosp }, escopo: estCob.ida && estCob.hosp ? "tudo" : "destino", moedaLocal: ml.value, criadoEm: v ? v.criadoEm : new Date().toISOString() });
+    if (v) { var cAnt = cobre(v); if (cAnt.ida !== estCob.ida || cAnt.hosp !== estCob.hosp) { delete nv.orcCat; delete nv.orcPct; } }
     nv.orcPag = {}; GRUPOS.forEach(function (gr) { var x = valorDe(pagIn[gr.id]); if (x > 0) nv.orcPag[gr.id] = x; });
     nv.cotacoes = Object.assign({}, (v && v.cotacoes) || {}); if (cot) nv.cotacoes[ml.value] = n0(cot.value, MOEDAS[ml.value][2]);
     if (v && v.destino !== dest) delete nv.dicas;
