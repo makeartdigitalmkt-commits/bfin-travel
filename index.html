@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261110-230750">
+<meta name="build" content="20261112-074937">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -136,7 +136,7 @@
   .item .v { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
   .item .v small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); }
   .dayhead { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--muted); padding: 16px 4px 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; scrollbar-width: thin; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
   .fchip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 0 12px; min-height: 36px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
   .fchip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .fchip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
@@ -377,6 +377,19 @@
   .togrow[aria-expanded="true"] i { transform: rotate(90deg); }
   .pgwrap { display: grid; gap: 8px; margin-top: 8px; }
 
+  .brand { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .ftog { margin-top: 12px; }
+  .ftog .ftt { display: grid; gap: 2px; min-width: 0; }
+  .ftog .ftt small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .fpanel { padding-top: 4px; }
+  .fpanel .fchip { min-height: 38px; }
+
+  @media (max-width: 560px) {
+    .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; overflow: visible; }
+    .tabs button { padding-inline: 4px; text-align: center; white-space: nowrap; }
+    .tabs .tlong { display: none; }
+  }
+
   /* Entrada do app */
   .login { max-width: 520px; margin: 24px auto; display: grid; gap: 14px; justify-items: center; text-align: center; padding: 36px 28px; }
   .loginlogo { width: 112px; height: 112px; border-radius: 28px; display: grid; place-items: center; background: radial-gradient(circle at 30% 20%, #17463f, #0a121b); box-shadow: 0 0 40px rgba(100, 214, 189, 0.25); }
@@ -388,6 +401,7 @@
   .apoiotx { display: grid; gap: 4px; flex: 1 1 220px; }
   .foot { display: grid; justify-items: center; }
   .updbar { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--accent); box-shadow: 0 12px 40px rgba(0,0,0,0.4); font-weight: 700; font-size: 14px; max-width: 520px; margin-inline: auto; }
+  html, body { overscroll-behavior-y: contain; }
   .plink { color: var(--accent); font-weight: 700; font-size: 14px; text-decoration: none; }
   body { margin: 0; }
 </style>
@@ -417,9 +431,9 @@
     <div class="hero" id="hero"></div>
     <nav class="tabs" role="tablist" aria-label="Seções" id="tabs">
       <button role="tab" data-tab="painel" aria-selected="true">Painel</button>
-      <button role="tab" data-tab="gastos" aria-selected="false">Gastos e relatório</button>
+      <button role="tab" data-tab="gastos" aria-selected="false">Gastos<span class="tlong"> e relatório</span></button>
       <button role="tab" data-tab="orcamento" aria-selected="false">Orçamento</button>
-      <button role="tab" data-tab="dicas" aria-selected="false">Dicas e lugares</button>
+      <button role="tab" data-tab="dicas" aria-selected="false"><span class="tlong">Dicas e </span>Lugares</button>
     </nav>
   </div>
 </div>
@@ -712,7 +726,7 @@ var GD = {
         GD.cliente.callback = function (r) {
           if (r.error) { erro(new Error(r.error === "access_denied" ? "Você não autorizou o acesso." : "O login do Google não foi concluído.")); return; }
           if (!google.accounts.oauth2.hasGrantedAllScopes(r, "https://www.googleapis.com/auth/drive.file")) { erro(new Error("Para guardar suas viagens, marque a permissão de arquivos do Google Drive e tente de novo.")); return; }
-          GD.token = r.access_token; GD.exp = Date.now() + (Number(r.expires_in || 3600) - 120) * 1000; GD.expirou = false; ok();
+          GD.token = r.access_token; GD.exp = Date.now() + (Number(r.expires_in || 3600) - 120) * 1000; GD.expirou = false; GD.guardarSessao(); ok();
         };
         GD.cliente.error_callback = function (e) { erro(new Error(e && e.type === "popup_closed" ? "A janela de login foi fechada." : e && e.type === "popup_failed_to_open" ? "O navegador bloqueou a janela de login. Libere pop-ups para este site e tente de novo." : "Não consegui abrir o login do Google.")); };
         var op = { prompt: prompt == null ? "" : prompt };
@@ -721,26 +735,36 @@ var GD = {
       }).then(function () {
         return GD.api("https://www.googleapis.com/oauth2/v3/userinfo").then(function (u) {
           GD.email = String(u.email || "").toLowerCase(); GD.nome = u.name || ""; GD.foto = u.picture || "";
-          pref("email", GD.email);
+          pref("email", GD.email); pref("nome", GD.nome); GD.guardarSessao();
         });
       });
     };
     if (GD.cliente) return pedir();
     return GD.carregarGIS().then(function () { GD.prepararCliente(); return pedir(); });
   },
+  /* A sessão do Google dura cerca de 1 hora. Guardamos neste aparelho para não pedir login a cada recarga. */
+  guardarSessao: function () { try { localStorage.setItem("carteira-sessao", JSON.stringify({ t: GD.token, exp: GD.exp, email: GD.email, nome: GD.nome })); } catch (e) {} },
+  retomarSessao: function () {
+    try {
+      var s = JSON.parse(localStorage.getItem("carteira-sessao") || "null");
+      if (!s || !s.t || !s.exp || Date.now() > s.exp - 60000) return false;
+      GD.token = s.t; GD.exp = s.exp; GD.email = s.email || pref("email") || ""; GD.nome = s.nome || pref("nome") || ""; GD.expirou = false;
+      return true;
+    } catch (e) { return false; }
+  },
   sair: function () {
     try { if (GD.token) google.accounts.oauth2.revoke(GD.token, function () {}); } catch (e) {}
     GD.token = null; GD.minha = null; GD.fontes = []; GD.abas = {};
-    try { localStorage.removeItem("carteira-email"); localStorage.removeItem("carteira-fonte"); localStorage.removeItem("carteira-viagem"); } catch (e) {}
+    try { ["carteira-email", "carteira-nome", "carteira-fonte", "carteira-viagem", "carteira-sessao"].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
   },
 
   /* ---- Chamadas às APIs do Google ---- */
   api: function (url, op) {
     op = op || {};
-    if (!GD.token || Date.now() > GD.exp) { GD.expirou = true; return Promise.reject(new Error("Sua sessão expirou. Toque em Continuar para entrar de novo.")); }
+    if (!GD.token || Date.now() > GD.exp) { GD.expirou = true; try { localStorage.removeItem("carteira-sessao"); } catch (e) {} return Promise.reject(new Error("Sua sessão expirou. Toque em Continuar para entrar de novo.")); }
     var h = { Authorization: "Bearer " + GD.token }; if (op.body) h["Content-Type"] = "application/json";
     return fetch(url, { method: op.method || "GET", headers: h, body: op.body ? JSON.stringify(op.body) : undefined }).then(function (r) {
-      if (r.status === 401) { GD.expirou = true; throw new Error("Sua sessão expirou. Toque em Continuar para entrar de novo."); }
+      if (r.status === 401) { GD.expirou = true; try { localStorage.removeItem("carteira-sessao"); } catch (e) {} throw new Error("Sua sessão expirou. Toque em Continuar para entrar de novo."); }
       if (r.status === 429) throw new Error("Muitos pedidos agora. Espere um minuto e tente de novo.");
       if (r.status === 403) return r.text().then(function (t) {
         var msg = ""; try { var j = JSON.parse(t); msg = (j.error && j.error.message) || ""; } catch (e) { msg = t || ""; }
@@ -973,10 +997,13 @@ function renovarSessao() {
 }
 function sairDoApp() { GD.sair(); fecharFolha(); Store.modo = "login"; Store.viagens = []; Store.gastos = []; Store.lugares = []; Store.fontes = []; Store.viagemId = null; render(); }
 function appBoot() {
-  Store.modo = "login"; Store.gisPronto = false; render();
+  Store.gisPronto = false;
+  var retomou = appConfigurado && GD.retomarSessao();
+  if (retomou) { Store.modo = "carregando"; render(); Store.iniciar(); }
+  else { Store.modo = "login"; render(); }
   if (!appConfigurado) return;
-  GD.carregarGIS().then(function () { GD.prepararCliente(); Store.gisPronto = true; render(); })
-    .catch(function () { Store.erroLogin = "Não consegui carregar o login do Google. Verifique a internet e recarregue."; render(); });
+  GD.carregarGIS().then(function () { GD.prepararCliente(); Store.gisPronto = true; if (Store.modo === "login") render(); })
+    .catch(function () { if (Store.modo === "login") { Store.erroLogin = "Não consegui carregar o login do Google. Verifique a internet e recarregue."; render(); } });
 }
 /* Instalação como app */
 var pedidoInstalar = null;
@@ -1041,7 +1068,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261110-230750";
+var BUILD = "20261112-074937";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1091,7 +1118,7 @@ var Store = {
         Store.modo = "gas"; Store.email = r.email; Store.fontes = r.fontes;
         var f = pref("fonte"); Store.fonte = Store.fontes.some(function (x) { return x.id === f; }) ? f : Store.fontes[0].id;
         Store.carregarFonte();
-      }).catch(function (e) { Store.modo = "erro"; Store.erro = (e && e.message) || String(e); render(); });
+      }).catch(function (e) { if (typeof GD !== "undefined" && GD.expirou) { GD.expirou = false; Store.modo = "login"; render(); return; } Store.modo = "erro"; Store.erro = (e && e.message) || String(e); render(); });
       return;
     }
     var pronto = false;
@@ -1620,6 +1647,7 @@ function textoFiltros(v) {
   if (filtro.q) t.push('busca "' + filtro.q + '"');
   return t.join(", ");
 }
+var filtrosAbertos = null;
 function renderGastos(main, v) {
   var c = el("div", "card");
   var h = el("h2", null, "Gastos e relatório"); c.appendChild(h);
@@ -1636,22 +1664,31 @@ function renderGastos(main, v) {
     });
     return f;
   }
-  c.appendChild(el("span", "lbl flab", "Período"));
-  c.appendChild(chips([{ id: "tudo", nome: "Toda a viagem" }, { id: "antes", nome: "Antes da viagem" }, { id: "durante", nome: "Durante" }, { id: "datas", nome: "Escolher datas" }], "periodo", "Período"));
+  var nAtivos = (filtro.periodo !== "tudo" ? 1 : 0) + (filtro.cat ? 1 : 0) + (filtro.pag ? 1 : 0) + (filtro.agrupar === "categoria" ? 1 : 0);
+  var aberto = filtrosAbertos === null ? window.innerWidth > 640 : filtrosAbertos;
+  var tg = el("button", "togrow ftog"); tg.type = "button"; tg.setAttribute("aria-expanded", aberto ? "true" : "false");
+  var tt = el("span", "ftt"); tt.appendChild(el("b", null, "Filtros" + (nAtivos ? " (" + nAtivos + ")" : ""))); tt.appendChild(el("small", null, textoFiltros(v) + (filtro.agrupar === "categoria" ? " · por categoria" : " · por dia"))); tg.appendChild(tt);
+  tg.appendChild(el("i", null, "›"));
+  tg.onclick = function () { filtrosAbertos = !aberto; render(); };
+  c.appendChild(tg);
+  var fp = el("div", "fpanel"); fp.hidden = !aberto; c.appendChild(fp);
+  fp.appendChild(el("span", "lbl flab", "Período"));
+  fp.appendChild(chips([{ id: "tudo", nome: "Toda a viagem" }, { id: "antes", nome: "Antes da viagem" }, { id: "durante", nome: "Durante" }, { id: "datas", nome: "Escolher datas" }], "periodo", "Período"));
   if (filtro.periodo === "datas") {
     var info = el("p", "hint", filtro.de ? "De " + dataLonga(filtro.de) + " até " + dataLonga(filtro.ate || filtro.de) + ". Toque no primeiro e no último dia." : "Toque no primeiro e no último dia.");
     var cal = calendario({ de: filtro.de, ate: filtro.ate, faixaViagem: [v.ida, v.volta], onPick: function (d) {
       if (!filtro.de || (filtro.de && filtro.ate)) { filtro.de = d; filtro.ate = ""; } else if (d < filtro.de) { filtro.ate = filtro.de; filtro.de = d; } else filtro.ate = d;
       render();
     } });
-    var cw = el("div", "calwrap"); cw.appendChild(info); cw.appendChild(cal); c.appendChild(cw);
+    var cw = el("div", "calwrap"); cw.appendChild(info); cw.appendChild(cal); fp.appendChild(cw);
   }
-  c.appendChild(el("span", "lbl flab", "Categoria"));
-  c.appendChild(chips([{ id: "", nome: "Todas" }].concat(CATS.map(function (x) { return { id: x.id, nome: x.nome, cor: catColor(x.id) }; })), "cat", "Categoria"));
-  c.appendChild(el("span", "lbl flab", "Pagamento"));
-  c.appendChild(chips([{ id: "", nome: "Todos" }].concat(PAG).concat([{ id: "nao", nome: "Não informado" }]), "pag", "Forma de pagamento"));
-  c.appendChild(el("span", "lbl flab", "Organizar por"));
-  c.appendChild(chips([{ id: "dia", nome: "Dia" }, { id: "categoria", nome: "Categoria" }], "agrupar", "Organizar por"));
+  fp.appendChild(el("span", "lbl flab", "Categoria"));
+  fp.appendChild(chips([{ id: "", nome: "Todas" }].concat(CATS.map(function (x) { return { id: x.id, nome: x.nome, cor: catColor(x.id) }; })), "cat", "Categoria"));
+  fp.appendChild(el("span", "lbl flab", "Pagamento"));
+  fp.appendChild(chips([{ id: "", nome: "Todos" }].concat(PAG).concat([{ id: "nao", nome: "Não informado" }]), "pag", "Forma de pagamento"));
+  fp.appendChild(el("span", "lbl flab", "Organizar por"));
+  fp.appendChild(chips([{ id: "dia", nome: "Dia" }, { id: "categoria", nome: "Categoria" }], "agrupar", "Organizar por"));
+  if (nAtivos) { var lp = el("button", "linkbtn", "Limpar filtros"); lp.type = "button"; lp.onclick = function () { filtro.periodo = "tudo"; filtro.cat = ""; filtro.pag = ""; filtro.agrupar = "dia"; filtro.de = ""; filtro.ate = ""; render(); }; fp.appendChild(lp); }
   main.appendChild(c);
 
   var res = el("div", "card"); res.style.marginTop = "16px";
@@ -2283,6 +2320,12 @@ Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function
 $("tripSel").onchange = function () { Store.escolher(this.value); };
 $("fonteSel").onchange = function () { Store.trocarFonte(this.value); };
 $("novaViagem").onclick = function () { abrirViagem(null); };
+(function () {
+  var b = document.querySelector(".brand"); if (!b) return;
+  b.setAttribute("role", "button"); b.tabIndex = 0; b.title = "Ir para o Painel";
+  var ir = function () { fecharFolha(); if (viagemAtual()) trocarAba("painel"); else window.scrollTo(0, 0); };
+  b.onclick = ir; b.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ir(); } };
+})();
 $("fab").onclick = function () { abrirGasto(null); };
 /* ---------- Conta, acesso e exemplos ---------- */
 function limparExemplos() {
