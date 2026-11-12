@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261112-095448">
+<meta name="build" content="20261112-184137">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -439,7 +439,7 @@
 </div>
 
 <main class="in" id="main" aria-live="polite"></main>
-<footer class="in foot"><button type="button" class="btn solid" id="apoioBtn">♥ Apoie o BFin Travel com um Pix</button><br><br>© 2026 BFin Travel by Robinson Borborema. Todos os direitos reservados. · <a href="privacidade.html" style="color:inherit">Privacidade</a></footer>
+<footer class="in foot"><span id="apoioWrap" style="display:block;margin-bottom:18px"><button type="button" class="btn solid" id="apoioBtn">♥ Apoie o BFin Travel com um Pix</button></span>© 2026 BFin Travel by Robinson Borborema. Todos os direitos reservados. · <a href="privacidade.html" style="color:inherit">Privacidade</a></footer>
 <button type="button" class="fab" id="fab" hidden><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Lançar gasto</button>
 <div id="layer"></div>
 
@@ -1082,7 +1082,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261112-095448";
+var BUILD = "20261112-184137";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1404,6 +1404,7 @@ function render() {
   renderTopo(v);
   var main = $("main"); main.textContent = "";
   $("fab").hidden = !v || !Store.podeEditar() || Store.modo === "login";
+  if ($("apoioWrap")) $("apoioWrap").hidden = Store.modo !== "login";
   if (Store.modo === "login") { $("tabs").hidden = true; $("novaViagem").hidden = true; $("contaBtn").hidden = true; renderLogin(main); return; }
   $("contaBtn").hidden = false;
   if (typeof GD !== "undefined" && GD.expirou) {
