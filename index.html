@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261112-074937">
+<meta name="build" content="20261112-093258">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -481,12 +481,26 @@ function pref(k, v) { try { if (v === undefined) return localStorage.getItem("ca
 /* ---------- Formas de pagamento ---------- */
 var PAG = [
   { id: "dinheiro", nome: "Dinheiro", grupo: "dinheiro", ic: '<rect x="2.5" y="6.5" width="19" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.9"/>' },
-  { id: "credito", nome: "Crédito", grupo: "cartao", ic: '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M2.5 10h19M6 15h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' },
-  { id: "debito", nome: "Débito", grupo: "cartao", ic: '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M6 10h5M6 14h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' },
-  { id: "pix", nome: "Pix", grupo: "pix", ic: '<path d="M12 3l9 9-9 9-9-9z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8.5 12h7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' }
+  { id: "credito", nome: "Crédito", grupo: "credito", ic: '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M2.5 10h19M6 15h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' },
+  { id: "debito", nome: "Débito", grupo: "conta", ic: '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M6 10h5M6 14h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' },
+  { id: "pix", nome: "Pix", grupo: "conta", ic: '<path d="M12 3l9 9-9 9-9-9z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8.5 12h7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' }
 ];
 var PAGM = {}; PAG.forEach(function (p) { PAGM[p.id] = p; });
-var GRUPOS = [{ id: "dinheiro", nome: "Dinheiro" }, { id: "cartao", nome: "Cartão (crédito e débito)" }, { id: "pix", nome: "Pix" }];
+var GRUPOS = [
+  { id: "dinheiro", nome: "Dinheiro em espécie", curto: "Dinheiro", ic: PAGM.dinheiro.ic },
+  { id: "credito", nome: "Cartão de crédito", curto: "Crédito", ic: PAGM.credito.ic },
+  { id: "conta", nome: "Conta (Pix e débito)", curto: "Conta (Pix e débito)", ic: '<path d="M3 9.5 12 4l9 5.5M5 10v8M9.7 10v8M14.3 10v8M19 10v8M3 20h18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>' }
+];
+/* Versões antigas guardavam "cartao" (crédito e débito juntos) e "pix". Agora: crédito à parte; Pix e débito juntos na conta. */
+var GRUPO_ANTIGO = { cartao: "credito", pix: "conta" };
+function grupoNome(id) { var g = GRUPOS.filter(function (x) { return x.id === (GRUPO_ANTIGO[id] || id); })[0]; return g ? g.nome : id; }
+function normPag(v) {
+  if (!v || !v.orcPag) return v;
+  Object.keys(GRUPO_ANTIGO).forEach(function (k) {
+    if (typeof v.orcPag[k] === "number") { var n = GRUPO_ANTIGO[k]; v.orcPag[n] = (v.orcPag[n] || 0) + v.orcPag[k]; delete v.orcPag[k]; }
+  });
+  return v;
+}
 function grupoDe(g) { return g.pagamento && PAGM[g.pagamento] ? PAGM[g.pagamento].grupo : null; }
 
 /* ---------- Valores com máscara: digita só números e o campo forma 1.234,56 ---------- */
@@ -1068,7 +1082,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261112-074937";
+var BUILD = "20261112-093258";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1261,7 +1275,7 @@ var Store = {
 };
 
 /* ---------- Cálculos ---------- */
-function viagemAtual() { return Store.viagens.filter(function (v) { return v.id === Store.viagemId; })[0] || null; }
+function viagemAtual() { return normPag(Store.viagens.filter(function (v) { return v.id === Store.viagemId; })[0] || null); }
 /* escopo "tudo": o orçamento cobre passagens, hospedagem e gastos no destino.
    escopo "destino": só os gastos no destino; passagens e hospedagem ficam à parte. */
 var FIXAS = ["transporte", "hospedagem"];
@@ -1557,11 +1571,16 @@ function renderPainel(main, v) {
     var usado = porGrupo[gr.id] || 0, li = lim[gr.id] || 0;
     if (!usado && !li) return;
     var row = el("div", "catrow");
-    var ic = el("span", "cic"); ic.style.background = "var(--accent)"; ic.appendChild(svgIc(PAGM[gr.id === "cartao" ? "credito" : gr.id].ic, 18)); row.appendChild(ic);
+    var ic = el("span", "cic"); ic.style.background = "var(--accent)"; ic.appendChild(svgIc(gr.ic, 18)); row.appendChild(ic);
     var mid = el("div");
     var nm = el("div", "nm"); nm.appendChild(el("b", null, gr.nome)); nm.appendChild(el("span", "num", li ? Math.round(usado / li * 100) + "%" : "sem limite")); mid.appendChild(nm);
     if (li) { var tr = el("div", "track"); var bar = el("i"); bar.style.width = Math.min(100, usado / li * 100) + "%"; bar.style.background = usado > li ? "var(--bad)" : "var(--accent)"; tr.appendChild(bar); mid.appendChild(tr); }
     if (li && gr.id === "dinheiro") mid.appendChild(el("div", "hint num", usado > li ? "Passou " + brl(usado - li) + " do dinheiro levado" : "Restam " + brl(li - usado) + " em dinheiro"));
+    if (li && gr.id === "credito") mid.appendChild(el("div", "hint num", usado > li ? "Passou " + brl(usado - li) + " do limite planejado" : "Restam " + brl(li - usado) + " no limite planejado"));
+    if (gr.id === "conta" && usado) {
+      var px = 0, db = 0; Store.gastos.forEach(function (g) { if (g.pagamento === "pix") px += g.valorBRL || 0; else if (g.pagamento === "debito") db += g.valorBRL || 0; });
+      mid.appendChild(el("div", "hint num", "Pix " + brl(px) + " · Débito " + brl(db)));
+    }
     row.appendChild(mid);
     var val = el("div", "val" + (li && usado > li ? " over" : ""), brl(usado)); if (li) val.appendChild(el("small", null, "de " + brl(li))); row.appendChild(val);
     lpg.appendChild(row);
@@ -1818,13 +1837,13 @@ function renderOrcamento(main, vSalva) {
   // Por forma de pagamento
   var cp = el("div", "card"); cp.style.marginTop = "16px";
   var hp = el("h2", null, "Por forma de pagamento"); hp.appendChild(el("small", null, "opcional")); cp.appendChild(hp);
-  cp.appendChild(el("p", "hint", "Diga quanto vai levar em dinheiro e o limite que pretende usar no cartão e no Pix. Deixe em branco o que não quiser controlar."));
+  cp.appendChild(el("p", "hint", "Diga quanto vai levar em dinheiro, o limite para o cartão de crédito e quanto vai sair da conta (Pix e débito). Deixe em branco o que não quiser controlar."));
   var pagIn = {}, op = v.orcPag || {}, porGrupo = {};
   Store.gastos.forEach(function (g) { var k = grupoDe(g); if (k) porGrupo[k] = (porGrupo[k] || 0) + (g.valorBRL || 0); });
   var lp = el("div"); lp.style.marginTop = "8px";
   GRUPOS.forEach(function (gr) {
     var row = el("div", "budrow");
-    var ic = el("span", "cic"); ic.style.background = "var(--accent)"; ic.appendChild(svgIc(PAGM[gr.id === "cartao" ? "credito" : gr.id].ic, 18)); row.appendChild(ic);
+    var ic = el("span", "cic"); ic.style.background = "var(--accent)"; ic.appendChild(svgIc(gr.ic, 18)); row.appendChild(ic);
     var nm = el("div"); nm.appendChild(el("b", null, gr.nome)); nm.appendChild(el("div", "hint num", "usado: " + brl(porGrupo[gr.id] || 0))); row.appendChild(nm);
     var inp = campoMoeda(document.createElement("input"), op[gr.id] || 0); inp.placeholder = "sem limite"; inp.setAttribute("aria-label", "Limite para " + gr.nome);
     row.appendChild(inp); pagIn[gr.id] = inp; row.appendChild(el("span", "pc"));
@@ -1860,7 +1879,7 @@ function renderOrcamento(main, vSalva) {
       var it = el("div", "item"); it.style.cursor = "default"; it.style.gridTemplateColumns = "38px minmax(0, 1fr) auto";
       var ic = el("span", "cic"); ic.style.background = "var(--good)"; ic.appendChild(svgIc('<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>', 16)); it.appendChild(ic);
       var m = el("div"); m.appendChild(el("div", "t", a.nota || "Reforço do orçamento"));
-      m.appendChild(el("div", "d", fmtData(a.data) + (a.categoria ? " · " + CAT[a.categoria].nome : "") + (a.grupo ? " · limite de " + GRUPOS.filter(function (g) { return g.id === a.grupo; })[0].nome.toLowerCase() : ""))); it.appendChild(m);
+      m.appendChild(el("div", "d", fmtData(a.data) + (a.categoria ? " · " + CAT[a.categoria].nome : "") + (a.grupo ? " · limite de " + grupoNome(a.grupo).toLowerCase() : ""))); it.appendChild(m);
       it.appendChild(el("div", "v num", "+ " + brl2(a.valor)));
       la.appendChild(it);
     });
@@ -2124,11 +2143,11 @@ function abrirViagem(v) {
   sh.appendChild(tg);
   var pgw = el("div", "pgwrap"); pgw.hidden = !temPag; sh.appendChild(pgw);
   tg.onclick = function () { pgw.hidden = !pgw.hidden; tg.setAttribute("aria-expanded", pgw.hidden ? "false" : "true"); };
-  pgw.appendChild(el("p", "hint", "Diga quanto desse valor vai em dinheiro, cartão ou Pix. Deixe em branco o que não quiser controlar."));
+  pgw.appendChild(el("p", "hint", "Diga quanto desse valor vai em dinheiro, no cartão de crédito ou sai da conta (Pix e débito). Deixe em branco o que não quiser controlar."));
   var pg = el("div", "paysplit"); pgw.appendChild(pg);
   var pagIn = {};
   GRUPOS.forEach(function (gr) {
-    var f = el("div", "f"); var lb = el("label", null, gr.id === "cartao" ? "Cartão" : gr.nome); lb.htmlFor = "fvPag_" + gr.id; f.appendChild(lb);
+    var f = el("div", "f"); var lb = el("label", null, gr.nome); lb.htmlFor = "fvPag_" + gr.id; f.appendChild(lb);
     var inp = campoMoeda(document.createElement("input"), v && v.orcPag && v.orcPag[gr.id] ? v.orcPag[gr.id] : 0); inp.id = "fvPag_" + gr.id; inp.placeholder = "0,00";
     f.appendChild(inp); pg.appendChild(f); pagIn[gr.id] = inp;
   });
