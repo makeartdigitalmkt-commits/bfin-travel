@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261112-093258">
+<meta name="build" content="20261112-095448">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -465,7 +465,7 @@ function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.cla
 function svgIc(path, size) { var s = document.createElement("span"); s.innerHTML = '<svg width="' + (size || 18) + '" height="' + (size || 18) + '" viewBox="0 0 24 24" aria-hidden="true">' + path + "</svg>"; return s.firstChild; }
 function catColor(id) { return "var(--c-" + id + ")"; }
 function catIcon(id, size) { var w = el("span", "cic"); w.style.background = catColor(id); w.appendChild(svgIc(CAT[id].ic, size || 18)); return w; }
-function brl(n) { return "R$ " + Math.round(n).toLocaleString("pt-BR"); }
+function brl(n) { var x = Math.round((Number(n) || 0) * 100) / 100; if (Object.is(x, -0)) x = 0; return "R$ " + x.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function brl2(n) { return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function moedaFmt(v, m) { return (MOEDAS[m] ? MOEDAS[m][1] : m) + " " + v.toLocaleString("pt-BR", { maximumFractionDigits: 2 }); }
 function n0(v, d) { var x = parseFloat(String(v).replace(/\./g, "").replace(",", ".")); if (String(v).indexOf(",") < 0) x = parseFloat(v); return isFinite(x) ? x : d; }
@@ -1082,7 +1082,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261112-093258";
+var BUILD = "20261112-095448";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1369,7 +1369,7 @@ function orcCat(v) {
     if (fixa || m === "total") o[c.id] = 0;
     else if (m === "valor" && v.orcCat && typeof v.orcCat[c.id] === "number") o[c.id] = v.orcCat[c.id];
     else if (m === "pct" && v.orcPct && typeof v.orcPct[c.id] === "number") o[c.id] = Math.round((v.orcamento || 0) * v.orcPct[c.id]) / 100;
-    else o[c.id] = Math.round((v.orcamento || 0) * pctPadrao(v, c) / 100);
+    else o[c.id] = Math.round((v.orcamento || 0) * pctPadrao(v, c)) / 100;
   });
   return o;
 }
