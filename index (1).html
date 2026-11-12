@@ -1,0 +1,2481 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
+<meta name="build" content="20261112-095448">
+<meta name="theme-color" content="#0a121b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BFin Travel">
+<title>BFin Travel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  /* Layout: faixa escura da marca com logo, viagem atual e abas; painel em cartões com destaque neon
+     (saldo, indicadores, categorias, gastos por dia); botão fixo para lançar gasto; folhas deslizantes.
+     Marca BFin Travel: Azul Profundo #101C29, Verde Menta #64D6BD, Branco Gelo #F7F9FA, Manrope. */
+  :root {
+    --bg: #f2f6f8; --surface: #ffffff; --surface-2: #eef3f6; --ink: #101c29; --muted: #5b6c7b; --line: #dde6ec;
+    --band: #101c29; --band-2: #1a2e42; --band-ink: #f7f9fa; --band-muted: #9db2c3;
+    --accent: #0e9c80; --accent-ink: #ffffff; --accent-soft: #ddf5ef;
+    --mint: #64d6bd; --cta: #64d6bd; --cta-ink: #08201b; --cta-2: #3fbf9f;
+    --good: #157a4c; --good-bg: #dcf5e8; --warn: #8a5d00; --warn-bg: #fdefc9; --bad: #b03a24; --bad-bg: #fbe2dc;
+    --c-transporte: #2f6fd6; --c-hospedagem: #7a4fd0; --c-restaurante: #e0663a; --c-mercado: #c98d0a;
+    --c-passeios: #12a37a; --c-lazer: #d1477a; --c-local: #2a93a8; --c-outros: #7b8a96;
+    --shadow: 0 1px 2px rgba(16, 28, 41, 0.05), 0 8px 24px rgba(16, 28, 41, 0.07);
+    --glow: 0 8px 22px rgba(14, 156, 128, 0.28);
+    --f-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+    --f-body: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a121b; --surface: #101c29; --surface-2: #16263a; --ink: #f7f9fa; --muted: #93a8b9; --line: #1f3347;
+      --band: #0a121b; --band-2: #16263a; --band-ink: #f7f9fa; --band-muted: #8fa6b8;
+      --accent: #64d6bd; --accent-ink: #08201b; --accent-soft: #12332f;
+      --good: #7fe3b0; --good-bg: #12352a; --warn: #f2d27c; --warn-bg: #3a3214; --bad: #ff9f8c; --bad-bg: #3d1d19;
+      --c-transporte: #5b9dff; --c-hospedagem: #a98bff; --c-restaurante: #ff8a5c; --c-mercado: #f5c451;
+      --c-passeios: #4fe0a8; --c-lazer: #ff6fa8; --c-local: #4fd2e8; --c-outros: #8ea2b2;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35); --glow: 0 0 26px rgba(100, 214, 189, 0.45); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a121b; --surface: #101c29; --surface-2: #16263a; --ink: #f7f9fa; --muted: #93a8b9; --line: #1f3347;
+    --band: #0a121b; --band-2: #16263a; --band-ink: #f7f9fa; --band-muted: #8fa6b8;
+    --accent: #64d6bd; --accent-ink: #08201b; --accent-soft: #12332f;
+    --good: #7fe3b0; --good-bg: #12352a; --warn: #f2d27c; --warn-bg: #3a3214; --bad: #ff9f8c; --bad-bg: #3d1d19;
+    --c-transporte: #5b9dff; --c-hospedagem: #a98bff; --c-restaurante: #ff8a5c; --c-mercado: #f5c451;
+    --c-passeios: #4fe0a8; --c-lazer: #ff6fa8; --c-local: #4fd2e8; --c-outros: #8ea2b2;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35); --glow: 0 0 26px rgba(100, 214, 189, 0.45); color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+  .in { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Faixa */
+  .band { background: var(--band); color: var(--band-ink); }
+  .band .in { padding-block: 14px 0; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--f-display); font-weight: 700; font-size: 20px; margin: 0; }
+  .brand svg { color: var(--cta); }
+  .tripbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tripbar select { min-height: 40px; border-radius: 999px; border: 1px solid var(--band-2); background: var(--band-2); color: var(--band-ink); padding: 0 14px; max-width: 240px; }
+  .ghost { min-height: 40px; border-radius: 999px; border: 1px solid var(--band-muted); background: transparent; color: var(--band-ink); padding: 0 14px; cursor: pointer; font-weight: 600; font-size: 14px; }
+  .ghost:hover { background: var(--band-2); }
+  .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 22px 0 18px; }
+  .hero h1 { font-family: var(--f-display); font-size: clamp(26px, 5vw, 38px); line-height: 1.1; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .hero .meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--band-muted); font-size: 14px; margin-top: 8px; }
+  .hero .meta b { color: var(--band-ink); font-weight: 600; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; background: var(--band-2); color: var(--band-ink); }
+  .pill.sun { background: var(--cta); color: var(--cta-ink); }
+  .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .tabs button { border: 0; background: none; color: var(--band-muted); padding: 10px 14px 12px; font-weight: 600; font-size: 15px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; min-height: 44px; }
+  .tabs button[aria-selected="true"] { color: var(--band-ink); border-bottom-color: var(--cta); }
+
+  main.in { padding-block: 22px 110px; }
+  .grid { display: grid; gap: 16px; }
+  .g-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.4fr); }
+  .g-two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  @media (max-width: 860px) { .g-hero, .g-two { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 18px; min-width: 0; }
+  .card h2 { font-family: var(--f-display); font-size: 17px; font-weight: 600; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .card h2 small { font-family: var(--f-body); font-size: 13px; font-weight: 500; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .hint { font-size: 13px; color: var(--muted); margin: 0; }
+
+  /* Anel */
+  .ringwrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; }
+  @media (max-width: 420px) { .ringwrap { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; } }
+  .ring { position: relative; width: 180px; height: 180px; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .ring .c b { font-family: var(--f-display); font-size: 30px; line-height: 1; }
+  .ring .c span { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .big { font-family: var(--f-display); font-size: 28px; font-weight: 700; line-height: 1.15; }
+  .status { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; margin-top: 10px; }
+  .status.good { background: var(--good-bg); color: var(--good); } .status.warn { background: var(--warn-bg); color: var(--warn); } .status.bad { background: var(--bad-bg); color: var(--bad); }
+
+  /* Indicadores */
+  .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px; display: grid; gap: 2px; min-width: 0; }
+  .kpi .l { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .kpi .v { font-family: var(--f-display); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .s { font-size: 12px; color: var(--muted); }
+
+  /* Categorias */
+  .cats { display: grid; gap: 14px; }
+  .catrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+  .cic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; }
+  .catrow .nm { font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+  .catrow .nm span { font-weight: 500; color: var(--muted); font-size: 13px; }
+  .track { position: relative; height: 8px; border-radius: 6px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
+  .track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; }
+  .catrow .val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .catrow .val small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+  .over { color: var(--bad); }
+
+  /* Gráfico por dia */
+  .chart { width: 100%; height: auto; display: block; }
+  .chart text { fill: var(--muted); font-size: 11px; font-family: var(--f-body); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  /* Lista de gastos */
+  .list { display: grid; }
+  .item { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 4px; border-top: 1px solid var(--line); cursor: pointer; border-radius: 10px; }
+  .item:first-child { border-top: 0; }
+  .item:hover { background: var(--surface-2); }
+  .item .t { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .d { font-size: 12px; color: var(--muted); }
+  .item .v { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .item .v small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); }
+  .dayhead { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--muted); padding: 16px 4px 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .fchip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 0 12px; min-height: 36px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .fchip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .fchip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  /* Botões e formulários */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: none; font-size: 15px; }
+  .btn.solid { background: var(--accent); color: var(--accent-ink); }
+  .btn.cta { background: var(--cta); border-color: var(--cta); color: var(--cta-ink); }
+  .btn.danger { border-color: var(--bad); color: var(--bad); }
+  .btn.danger.solid { background: var(--bad); color: #fff; }
+  .btn:disabled { opacity: 0.6; cursor: progress; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .f { display: grid; gap: 5px; min-width: 0; }
+  .f label, .lbl { font-size: 13px; font-weight: 600; }
+  .f input, .f select, .f textarea { min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); padding: 0 12px; width: 100%; min-width: 0; font-size: 16px; }
+  .f input:focus, .f select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+  .f2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .money { font-family: var(--f-display); font-size: 32px !important; font-weight: 700; min-height: 64px !important; }
+  .catpick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 440px) { .catpick { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .catpick button { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px 6px; display: grid; justify-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600; text-align: center; min-height: 76px; }
+  .catpick button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+  /* Folha deslizante */
+  .scrim { position: fixed; inset: 0; background: rgba(5, 20, 19, 0.55); z-index: 30; display: grid; align-items: end; justify-items: center; }
+  @media (min-width: 720px) { .scrim { align-items: center; } }
+  .sheet { background: var(--surface); width: min(560px, 100%); max-height: 92vh; overflow: auto; border-radius: 22px 22px 0 0; padding: 20px max(18px, env(safe-area-inset-left, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
+  @media (min-width: 720px) { .sheet { border-radius: 22px; } }
+  .sheet h3 { font-family: var(--f-display); font-size: 20px; margin: 0; display: flex; justify-content: space-between; align-items: center; }
+  .x { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); cursor: pointer; font-size: 18px; }
+  .fab { position: fixed; right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 20; min-height: 56px; padding: 0 22px; border-radius: 999px; border: 0; background: var(--cta); color: var(--cta-ink); font-weight: 700; font-size: 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+
+  /* Orçamento */
+  .budrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) 130px 54px; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .budrow:first-of-type { border-top: 0; }
+  .budrow input { min-height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); padding: 0 10px; width: 100%; text-align: right; font-variant-numeric: tabular-nums; }
+  .budrow .pc { font-size: 13px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  @media (max-width: 440px) { .budrow { grid-template-columns: 34px minmax(0, 1fr) 110px; } .budrow .pc { display: none; } }
+  .sumbar { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); margin-top: 10px; font-weight: 600; }
+
+  /* Dicas */
+  .tips { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .tip { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; }
+  .tip b { font-size: 15px; }
+  .tip span { font-size: 13px; color: var(--muted); }
+  .tip a { font-size: 13px; color: var(--accent); font-weight: 600; text-decoration: none; }
+  ul.clean { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+
+  .empty { text-align: center; padding: 40px 18px; display: grid; gap: 12px; justify-items: center; }
+  .empty h2 { font-family: var(--f-display); font-size: 24px; margin: 0; }
+  .notice { border-radius: 12px; padding: 10px 14px; font-size: 14px; background: var(--warn-bg); color: var(--warn); margin-bottom: 14px; }
+  .notice.info { background: var(--accent-soft); color: var(--ink); }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(90px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 600; z-index: 40; font-size: 14px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) { .track i { transition: width .4s ease; } }
+
+  /* Item com botão de editar */
+  .item { grid-template-columns: 38px minmax(0, 1fr) auto 28px; }
+  .item .edit { color: var(--muted); display: grid; place-items: center; }
+  .item:hover .edit { color: var(--accent); }
+  /* Campo de valor */
+  .money-sm { font-family: var(--f-display); font-size: 20px !important; font-weight: 700; }
+  /* Pagamento */
+  .paypick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .paypick button { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px 4px; display: grid; justify-items: center; gap: 4px; cursor: pointer; font-size: 13px; font-weight: 600; min-height: 64px; color: var(--muted); }
+  .paypick button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--ink); }
+  .paysum { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin: 6px 0 4px; }
+  .paysum span { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+  /* Calendário */
+  .cal { border: 1px solid var(--line); border-radius: 16px; padding: 10px; background: var(--surface); }
+  .calhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .calhead b { font-family: var(--f-display); font-size: 16px; text-transform: capitalize; }
+  .calnav { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface-2); font-size: 20px; cursor: pointer; }
+  .calnav:hover { background: var(--accent-soft); }
+  .calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+  .calwd { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); padding: 4px 0; }
+  .calday { aspect-ratio: 1 / 1; max-height: 44px; border: 0; background: transparent; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; font-variant-numeric: tabular-nums; position: relative; }
+  .calday:hover { background: var(--surface-2); }
+  .calday.trip { background: var(--accent-soft); }
+  .calday.mid { background: var(--accent-soft); border-radius: 0; }
+  .calday.start { border-radius: 12px 0 0 12px; } .calday.end { border-radius: 0 12px 12px 0; }
+  .calday.today::after { content: ""; position: absolute; left: 50%; bottom: 5px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--cta); }
+  .calday.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .calwrap { display: grid; gap: 8px; margin: 4px 0 8px; max-width: 380px; }
+  .dpair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dbtn { border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 8px 12px; text-align: left; cursor: pointer; display: grid; gap: 1px; min-height: 52px; }
+  .dbtn small { font-size: 12px; color: var(--muted); }
+  .dbtn b { font-size: 15px; }
+  .dbtn.ativo { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .dbtn.inline { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; border-radius: 999px; padding: 0 14px; font-weight: 600; font-size: 13px; }
+  /* Relatório */
+  .search { width: 100%; min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); padding: 0 14px; font-size: 15px; margin-bottom: 6px; }
+  .flab { display: block; margin: 8px 0 6px; color: var(--muted); }
+  .reptop { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  /* Painel premium */
+  .prem { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; padding: 24px; border-radius: 22px; color: var(--band-ink);
+    background: radial-gradient(120% 140% at 0% 0%, #17605a 0%, var(--band) 55%, #072624 100%); box-shadow: 0 10px 30px rgba(7, 38, 36, 0.25); }
+  @media (max-width: 820px) { .prem { grid-template-columns: minmax(0, 1fr); padding: 20px; } }
+  .prem-l { display: grid; gap: 6px; align-content: start; min-width: 0; }
+  .prem-k { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--band-muted); }
+  .prem-v { font-family: var(--f-display); font-size: clamp(38px, 7vw, 56px); font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+  .prem-s { font-size: 14px; color: var(--band-muted); margin: 0; }
+  .stack { position: relative; display: flex; height: 14px; border-radius: 8px; overflow: visible; background: rgba(255,255,255,0.12); margin: 12px 0 4px; }
+  .stack i { display: block; height: 100%; }
+  .stack i:first-child { border-radius: 8px 0 0 8px; }
+  .stack b { position: absolute; top: -5px; bottom: -5px; width: 3px; border-radius: 2px; background: #fff; }
+  .prem .status { justify-self: start; }
+  .prem-r { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; }
+  .ptile { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
+  .ptile .l { font-size: 12px; color: var(--band-muted); font-weight: 600; }
+  .ptile .v { font-family: var(--f-display); font-size: 22px; font-weight: 700; }
+  .ptile .v.ruim { color: #ffb4a3; }
+  .ptile .s { font-size: 12px; color: var(--band-muted); }
+  .alerts { display: grid; gap: 8px; margin-bottom: 14px; }
+  .alert { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-radius: 14px; padding: 10px 14px; font-size: 14px; font-weight: 500; }
+  .alert span { flex: 1 1 200px; }
+  .alert.bad { background: var(--bad-bg); color: var(--bad); } .alert.warn { background: var(--warn-bg); color: var(--warn); }
+  .abtn { border: 0; border-radius: 999px; min-height: 36px; padding: 0 14px; font-weight: 700; font-size: 13px; cursor: pointer; background: currentColor; }
+  .alert.bad .abtn { background: var(--bad); color: var(--bg); } .alert.warn .abtn { background: var(--warn); color: var(--bg); }
+  .seg4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  @media (max-width: 520px) { .seg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .seg4 button { border: 0; background: var(--surface-2); min-height: 44px; font-weight: 600; font-size: 14px; cursor: pointer; border-left: 1px solid var(--line); }
+  .seg4 button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .autov { text-align: right; font-weight: 700; }
+
+  /* BFin Travel: acabamento neon */
+  body { letter-spacing: -0.005em; }
+  .band { background: radial-gradient(90% 160% at 100% 0%, rgba(100, 214, 189, 0.16) 0%, transparent 55%), linear-gradient(180deg, #0a121b 0%, #101c29 100%); border-bottom: 1px solid rgba(100, 214, 189, 0.18); }
+  .brand { gap: 12px; font-weight: 800; font-size: 22px; letter-spacing: -0.02em; }
+  .brand .bf { color: #f7f9fa; } .brand .tr { color: #64d6bd; text-shadow: 0 0 18px rgba(100, 214, 189, 0.45); }
+  .brand small { display: block; font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--band-muted); text-shadow: none; }
+  .brand .sep { width: 1px; align-self: stretch; background: rgba(247, 249, 250, 0.2); }
+  @media (max-width: 520px) { .brand small, .brand .sep { display: none; } }
+  .hero h1 { font-weight: 800; letter-spacing: -0.025em; }
+  .tabs button { font-weight: 700; }
+  .tabs button[aria-selected="true"] { color: #f7f9fa; border-bottom-color: #64d6bd; box-shadow: 0 6px 14px -8px rgba(100, 214, 189, 0.9); }
+  .pill.sun { background: #64d6bd; color: #08201b; box-shadow: 0 0 16px rgba(100, 214, 189, 0.5); }
+  .ghost { border-color: rgba(100, 214, 189, 0.45); }
+  .ghost:hover { background: rgba(100, 214, 189, 0.12); }
+  .card, .kpi { border-radius: 20px; }
+  .card h2 { font-weight: 700; letter-spacing: -0.01em; }
+  .btn { font-weight: 700; }
+  .btn.cta, .fab { background: linear-gradient(135deg, #64d6bd 0%, #3fbf9f 100%); border-color: transparent; color: #08201b; box-shadow: var(--glow); }
+  .btn.cta:hover, .fab:hover { filter: brightness(1.06); }
+  .btn.solid { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .prem { color: #f7f9fa; border: 1px solid rgba(100, 214, 189, 0.32);
+    background: radial-gradient(70% 120% at 0% 0%, rgba(100, 214, 189, 0.26) 0%, transparent 60%), radial-gradient(60% 100% at 100% 100%, rgba(91, 157, 255, 0.14) 0%, transparent 60%), linear-gradient(135deg, #13263a 0%, #0a121b 100%);
+    box-shadow: 0 20px 50px rgba(5, 12, 20, 0.35), 0 0 40px rgba(100, 214, 189, 0.12); }
+  .prem-k { color: #64d6bd; }
+  .prem-v { text-shadow: 0 0 28px rgba(100, 214, 189, 0.35); }
+  .prem-s, .ptile .l, .ptile .s { color: #9db2c3; }
+  .stack { background: rgba(247, 249, 250, 0.1); box-shadow: 0 0 18px rgba(100, 214, 189, 0.18); }
+  .ptile { background: rgba(247, 249, 250, 0.05); border-color: rgba(100, 214, 189, 0.18); backdrop-filter: blur(4px); }
+  .ptile .v.ruim { color: #ff9f8c; }
+  .cic { box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.35); }
+  .calday.on, .seg4 button[aria-pressed="true"], .fchip[aria-pressed="true"] { box-shadow: var(--glow); }
+  .catpick button[aria-pressed="true"], .paypick button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--glow); }
+  .themebtn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(100, 214, 189, 0.45); background: transparent; color: #f7f9fa; cursor: pointer; display: grid; place-items: center; }
+  .themebtn:hover { background: rgba(100, 214, 189, 0.12); }
+  .grouphead { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 18px 4px 8px; border-bottom: 2px solid var(--line); }
+  .grouphead b { font-size: 15px; }
+  .grouphead .gv { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .grouphead .gv small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+
+  /* Símbolo, conta e rodapé */
+  .brand .logo { flex: none; filter: drop-shadow(0 0 10px rgba(100, 214, 189, 0.35)); }
+  .tripbar { gap: 8px; }
+  .foot { padding-block: 8px 110px; text-align: center; font-size: 13px; color: var(--muted); }
+  .who { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--surface-2); }
+  .who img { width: 44px; height: 44px; border-radius: 50%; }
+  .who div { display: grid; gap: 2px; }
+  .acc { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; }
+  .acc ol.clean { margin: 0; }
+  .levels { display: grid; gap: 8px; }
+  .levels div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+  main.in { padding-bottom: 24px; }
+
+  /* Dicas e lugares */
+  .explore { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .exp { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px; border-radius: 14px; background: var(--surface-2); color: var(--ink); text-decoration: none; border: 1px solid transparent; font-size: 14px; }
+  .exp:hover { border-color: var(--accent); box-shadow: var(--glow); }
+  .places { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 8px; }
+  .place { border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; display: grid; gap: 8px; background: var(--surface); }
+  .ptop { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+  .ptop > div { display: grid; min-width: 0; }
+  .ptop b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stbtn { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; min-height: 34px; padding: 0 12px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); }
+  .stbtn.fui { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .pfoot { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  .pfoot a { color: var(--accent); font-weight: 700; text-decoration: none; }
+  .tip a { color: var(--accent); }
+  /* Conta (Apps Script) */
+  .fonte { text-align: left; border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; cursor: pointer; }
+  .fonte.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .acrow { display: flex !important; justify-content: space-between; align-items: center; gap: 10px; }
+  .acrow > div { display: grid; gap: 2px; min-width: 0; }
+  .addacc { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto; gap: 8px; }
+  @media (max-width: 520px) { .addacc { grid-template-columns: minmax(0, 1fr); } }
+  .addacc input, .addacc select { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); padding: 0 12px; min-width: 0; }
+  #fonteSel { min-height: 40px; border-radius: 999px; border: 1px solid var(--band-2); background: var(--band-2); color: var(--band-ink); padding: 0 14px; max-width: 220px; }
+  .linkbtn { font: inherit; font-size: 13px; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 0; min-height: 32px; cursor: pointer; }
+  .heroside { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+  @media (max-width: 600px) { .heroside { flex-direction: row; align-items: center; flex-wrap: wrap; } }
+  #editarViagem { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; }
+  .paysplit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 420px) { .paysplit { grid-template-columns: minmax(0, 1fr); } }
+  .item .edit { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); color: var(--accent); }
+
+  /* Etapas da viagem e escolha do que o valor cobre */
+  .secao { display: flex; gap: 12px; align-items: flex-start; margin: 22px 0 4px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .sheet h3 + .secao { border-top: 0; padding-top: 0; margin-top: 6px; }
+  .secao i { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: 14px; background: var(--accent); color: var(--accent-ink); box-shadow: var(--glow); }
+  .secao b { display: block; font-size: 17px; }
+  .secao small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .cob { display: grid; gap: 8px; margin-top: 4px; }
+  .cob .lbl { margin-top: 8px; }
+  .vaigrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 520px) { .vaigrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .vchip { display: grid; justify-items: center; gap: 6px; padding: 12px 6px; min-height: 76px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: center; line-height: 1.2; }
+  .vchip[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); background: linear-gradient(160deg, rgba(100, 214, 189, 0.18), transparent 70%), var(--surface-2); box-shadow: var(--glow); }
+  .vchip[aria-pressed="true"] svg { color: var(--accent); }
+  .cobgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 520px) { .cobgrid { grid-template-columns: 1fr; } }
+  .ctile { position: relative; display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px; min-height: 64px; border-radius: 16px; border: 1px dashed var(--line); background: transparent; color: var(--ink); font: inherit; cursor: pointer; opacity: 0.75; }
+  .ctile.on { opacity: 1; border-style: solid; border-color: var(--accent); background: linear-gradient(160deg, rgba(100, 214, 189, 0.14), transparent 70%), var(--surface-2); }
+  .ctile.lock { cursor: default; border-color: var(--line); background: var(--surface-2); }
+  .ctile .ctx { display: grid; gap: 2px; flex: 1; min-width: 0; }
+  .ctile .ctx b { font-size: 14px; }
+  .ctile .ctx small { font-size: 12px; color: var(--muted); }
+  .ctile.on:not(.lock) .ctx small { color: var(--accent); font-weight: 700; }
+  .ccheck { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+  .ctile.on .ccheck { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .cobres { margin: 2px 0 0; padding: 10px 14px; border-radius: 12px; background: rgba(100, 214, 189, 0.1); font-size: 14px; }
+  .cobres b { color: var(--accent); }
+  .togrow { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+  .togrow small { color: var(--muted); font-weight: 600; }
+  .togrow i { margin-left: auto; font-style: normal; font-size: 20px; transition: transform 0.2s; }
+  .togrow[aria-expanded="true"] i { transform: rotate(90deg); }
+  .pgwrap { display: grid; gap: 8px; margin-top: 8px; }
+
+  .brand { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .ftog { margin-top: 12px; }
+  .ftog .ftt { display: grid; gap: 2px; min-width: 0; }
+  .ftog .ftt small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .fpanel { padding-top: 4px; }
+  .fpanel .fchip { min-height: 38px; }
+
+  @media (max-width: 560px) {
+    .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; overflow: visible; }
+    .tabs button { padding-inline: 4px; text-align: center; white-space: nowrap; }
+    .tabs .tlong { display: none; }
+  }
+
+  /* Entrada do app */
+  .login { max-width: 520px; margin: 24px auto; display: grid; gap: 14px; justify-items: center; text-align: center; padding: 36px 28px; }
+  .loginlogo { width: 112px; height: 112px; border-radius: 28px; display: grid; place-items: center; background: radial-gradient(circle at 30% 20%, #17463f, #0a121b); box-shadow: 0 0 40px rgba(100, 214, 189, 0.25); }
+  .login h2 { font-size: 26px; margin: 6px 0 0; display: block; }
+  .gbtn { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; padding: 0 22px; border-radius: 999px; border: 1px solid var(--line); background: #ffffff; color: #1f1f1f; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: var(--glow); width: 100%; max-width: 340px; }
+  .gbtn:disabled { opacity: 0.7; cursor: progress; }
+  .loginfo { display: grid; gap: 4px; text-align: left; margin-top: 6px; }
+  .apoio { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-color: var(--accent); background: linear-gradient(135deg, rgba(100,214,189,0.14), transparent 70%), var(--surface); }
+  .apoiotx { display: grid; gap: 4px; flex: 1 1 220px; }
+  .foot { display: grid; justify-items: center; }
+  .updbar { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--accent); box-shadow: 0 12px 40px rgba(0,0,0,0.4); font-weight: 700; font-size: 14px; max-width: 520px; margin-inline: auto; }
+  html, body { overscroll-behavior-y: contain; }
+  .plink { color: var(--accent); font-weight: 700; font-size: 14px; text-decoration: none; }
+  body { margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="band">
+  <div class="in">
+    <div class="top">
+      <p class="brand"><svg class="logo" width="46" height="46" viewBox="0 0 100 100" aria-hidden="true">
+        <path d="M28 37 L58 21.5 a7.5 7.5 0 0 1 9.8 3.2 L74 36.5" fill="none" stroke="#f7f9fa" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21.5 66 V47 a9.5 9.5 0 0 1 9.5-9.5 H75.5 a9.5 9.5 0 0 1 9.5 9.5 V72 a9.5 9.5 0 0 1 -9.5 9.5 H32" fill="none" stroke="#f7f9fa" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="66" y="50.5" width="21.5" height="15.5" rx="7.5" fill="#f7f9fa"/><circle cx="73.3" cy="58.2" r="2.7" fill="#0a121b"/>
+        <path d="M17.2 64.5 C9.5 71 8.6 78.2 15.2 79.2 C23.8 80.4 33.6 74.6 40.6 69.2 L38.2 66.4 C31.6 70.6 23 74.4 18.4 73.6 C14.8 73 14.6 69.4 17.2 64.5 Z" fill="#64d6bd"/>
+        <g transform="translate(36.5 45.5) rotate(48 12 12)"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" fill="#64d6bd"/></g>
+      </svg><span><span class="bf">BFin</span> <span class="tr">Travel</span></span><span class="sep" aria-hidden="true"></span><small>Sua viagem, seus gastos, tudo sob controle.</small></p>
+      <div class="tripbar">
+        <label for="tripSel" class="sr" hidden>Viagem</label>
+        <select id="fonteSel" aria-label="De quem são os dados" hidden></select>
+        <select id="tripSel" aria-label="Escolher viagem" hidden></select>
+        <button type="button" class="ghost" id="instalarBtn" hidden>Instalar app</button>
+        <button type="button" class="themebtn" id="contaBtn" aria-label="Conta e acesso" title="Conta e acesso"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
+        <button type="button" class="themebtn" id="temaBtn" aria-label="Tema"></button>
+        <button type="button" class="ghost" id="novaViagem">+ Nova viagem</button>
+      </div>
+    </div>
+    <div class="hero" id="hero"></div>
+    <nav class="tabs" role="tablist" aria-label="Seções" id="tabs">
+      <button role="tab" data-tab="painel" aria-selected="true">Painel</button>
+      <button role="tab" data-tab="gastos" aria-selected="false">Gastos<span class="tlong"> e relatório</span></button>
+      <button role="tab" data-tab="orcamento" aria-selected="false">Orçamento</button>
+      <button role="tab" data-tab="dicas" aria-selected="false"><span class="tlong">Dicas e </span>Lugares</button>
+    </nav>
+  </div>
+</div>
+
+<main class="in" id="main" aria-live="polite"></main>
+<footer class="in foot"><button type="button" class="btn solid" id="apoioBtn">♥ Apoie o BFin Travel com um Pix</button><br><br>© 2026 BFin Travel by Robinson Borborema. Todos os direitos reservados. · <a href="privacidade.html" style="color:inherit">Privacidade</a></footer>
+<button type="button" class="fab" id="fab" hidden><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Lançar gasto</button>
+<div id="layer"></div>
+
+<script>
+/* ---------- Dados fixos ---------- */
+var CATS = [
+  { id: "transporte", nome: "Passagens", pct: 25, ic: '<path d="M2 16l20-6-20-6 3 6-3 6zm3-6h9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>' },
+  { id: "hospedagem", nome: "Hospedagem", pct: 30, ic: '<path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.8" fill="currentColor"/>' },
+  { id: "restaurante", nome: "Restaurantes", pct: 15, ic: '<path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 21V3c-2 1.5-3 4-3 7h3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>' },
+  { id: "mercado", nome: "Mercado e lanches", pct: 5, ic: '<path d="M4 8h16l-1.5 11h-13zM9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>' },
+  { id: "passeios", nome: "Passeios", pct: 12, ic: '<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M14 8v10" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 2"/>' },
+  { id: "lazer", nome: "Lazer e compras", pct: 6, ic: '<path d="M5 8h14l-1 12H6zM9 8a3 3 0 0 1 6 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 12.5l1 2 2 .3-1.5 1.4.4 2-1.9-1-1.9 1 .4-2L9 14.8l2-.3z" fill="currentColor"/>' },
+  { id: "local", nome: "Transporte local", pct: 5, ic: '<path d="M3 15l2-6a2 2 0 0 1 2-1.5h10a2 2 0 0 1 2 1.5l2 6v4H3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="7.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="16.5" cy="15.5" r="1.3" fill="currentColor"/>' },
+  { id: "outros", nome: "Outros", pct: 2, ic: '<circle cx="6" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18" cy="12" r="1.8" fill="currentColor"/>' }
+];
+var CAT = {}; CATS.forEach(function (c) { CAT[c.id] = c; });
+var MOEDAS = { BRL: ["Real", "R$", 1], USD: ["Dólar", "US$", 5.4], EUR: ["Euro", "€", 6.2], GBP: ["Libra", "£", 7.2], ARS: ["Peso argentino", "ARS", 0.0045],
+  CLP: ["Peso chileno", "CLP", 0.0058], UYU: ["Peso uruguaio", "UYU", 0.13], PYG: ["Guarani", "PYG", 0.0007], PEN: ["Sol peruano", "S/", 1.45], MXN: ["Peso mexicano", "MX$", 0.29] };
+
+/* ---------- Utilidades ---------- */
+var $ = function (id) { return document.getElementById(id); };
+function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+function svgIc(path, size) { var s = document.createElement("span"); s.innerHTML = '<svg width="' + (size || 18) + '" height="' + (size || 18) + '" viewBox="0 0 24 24" aria-hidden="true">' + path + "</svg>"; return s.firstChild; }
+function catColor(id) { return "var(--c-" + id + ")"; }
+function catIcon(id, size) { var w = el("span", "cic"); w.style.background = catColor(id); w.appendChild(svgIc(CAT[id].ic, size || 18)); return w; }
+function brl(n) { var x = Math.round((Number(n) || 0) * 100) / 100; if (Object.is(x, -0)) x = 0; return "R$ " + x.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function brl2(n) { return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function moedaFmt(v, m) { return (MOEDAS[m] ? MOEDAS[m][1] : m) + " " + v.toLocaleString("pt-BR", { maximumFractionDigits: 2 }); }
+function n0(v, d) { var x = parseFloat(String(v).replace(/\./g, "").replace(",", ".")); if (String(v).indexOf(",") < 0) x = parseFloat(v); return isFinite(x) ? x : d; }
+function hoje() { var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function addDias(s, n) { var d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function difDias(a, b) { return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 86400000); }
+function fmtData(s) { var p = s.split("-"); return p[2] + "/" + p[1]; }
+function diaSemana(s) { return new Date(s + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).replace(".", ""); }
+function novoId(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function toast(t) { Array.prototype.forEach.call(document.querySelectorAll(".toast"), function (o) { o.remove(); }); var x = el("div", "toast", t); document.body.appendChild(x); setTimeout(function () { x.remove(); }, 2200); }
+function pref(k, v) { try { if (v === undefined) return localStorage.getItem("carteira-" + k); localStorage.setItem("carteira-" + k, v); } catch (e) { return null; } }
+
+/* ---------- Formas de pagamento ---------- */
+var PAG = [
+  { id: "dinheiro", nome: "Dinheiro", grupo: "dinheiro", ic: '<rect x="2.5" y="6.5" width="19" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.9"/>' },
+  { id: "credito", nome: "Crédito", grupo: "credito", ic: '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M2.5 10h19M6 15h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' },
+  { id: "debito", nome: "Débito", grupo: "conta", ic: '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M6 10h5M6 14h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' },
+  { id: "pix", nome: "Pix", grupo: "conta", ic: '<path d="M12 3l9 9-9 9-9-9z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8.5 12h7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' }
+];
+var PAGM = {}; PAG.forEach(function (p) { PAGM[p.id] = p; });
+var GRUPOS = [
+  { id: "dinheiro", nome: "Dinheiro em espécie", curto: "Dinheiro", ic: PAGM.dinheiro.ic },
+  { id: "credito", nome: "Cartão de crédito", curto: "Crédito", ic: PAGM.credito.ic },
+  { id: "conta", nome: "Conta (Pix e débito)", curto: "Conta (Pix e débito)", ic: '<path d="M3 9.5 12 4l9 5.5M5 10v8M9.7 10v8M14.3 10v8M19 10v8M3 20h18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>' }
+];
+/* Versões antigas guardavam "cartao" (crédito e débito juntos) e "pix". Agora: crédito à parte; Pix e débito juntos na conta. */
+var GRUPO_ANTIGO = { cartao: "credito", pix: "conta" };
+function grupoNome(id) { var g = GRUPOS.filter(function (x) { return x.id === (GRUPO_ANTIGO[id] || id); })[0]; return g ? g.nome : id; }
+function normPag(v) {
+  if (!v || !v.orcPag) return v;
+  Object.keys(GRUPO_ANTIGO).forEach(function (k) {
+    if (typeof v.orcPag[k] === "number") { var n = GRUPO_ANTIGO[k]; v.orcPag[n] = (v.orcPag[n] || 0) + v.orcPag[k]; delete v.orcPag[k]; }
+  });
+  return v;
+}
+function grupoDe(g) { return g.pagamento && PAGM[g.pagamento] ? PAGM[g.pagamento].grupo : null; }
+
+/* ---------- Valores com máscara: digita só números e o campo forma 1.234,56 ---------- */
+function fmtMoeda(n) { return (Math.round(n * 100) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function valorDe(inp) { var d = String(inp.value).replace(/\D/g, ""); return d ? parseInt(d, 10) / 100 : 0; }
+function campoMoeda(inp, valor) {
+  inp.type = "text"; inp.inputMode = "numeric"; inp.autocomplete = "off";
+  inp.value = valor ? fmtMoeda(valor) : "";
+  inp.addEventListener("input", function () {
+    var d = inp.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 11);
+    inp.value = d ? fmtMoeda(parseInt(d, 10) / 100) : "";
+    try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {}
+  });
+  return inp;
+}
+
+/* ---------- Calendário próprio ---------- */
+var MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+function dataLonga(s) { var t = new Date(s + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).replace(/\./g, ""); return t.charAt(0).toUpperCase() + t.slice(1); }
+/* op: { sel: "AAAA-MM-DD" | null, de, ate (faixa marcada), faixaViagem: [ida, volta], onPick(data) } */
+function calendario(op) {
+  var box = el("div", "cal");
+  var base = op.sel || op.de || hoje();
+  var mes = base.slice(0, 7);
+  function desenhar() {
+    box.textContent = "";
+    var y = parseInt(mes.slice(0, 4), 10), m = parseInt(mes.slice(5, 7), 10) - 1;
+    var head = el("div", "calhead");
+    var prev = el("button", "calnav", "‹"); prev.type = "button"; prev.setAttribute("aria-label", "Mês anterior");
+    var next = el("button", "calnav", "›"); next.type = "button"; next.setAttribute("aria-label", "Próximo mês");
+    prev.onclick = function () { var d = new Date(y, m - 1, 1); mes = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); desenhar(); };
+    next.onclick = function () { var d = new Date(y, m + 1, 1); mes = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); desenhar(); };
+    var tit = el("b", null, MESES[m] + " de " + y);
+    head.appendChild(prev); head.appendChild(tit); head.appendChild(next); box.appendChild(head);
+    var grid = el("div", "calgrid");
+    ["D", "S", "T", "Q", "Q", "S", "S"].forEach(function (d) { grid.appendChild(el("span", "calwd", d)); });
+    var primeiro = new Date(y, m, 1).getDay(), totalDias = new Date(y, m + 1, 0).getDate();
+    for (var i = 0; i < primeiro; i++) grid.appendChild(el("span"));
+    var h = hoje();
+    for (var d = 1; d <= totalDias; d++) {
+      var ds = y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+      var b = el("button", "calday", String(d)); b.type = "button"; b.dataset.d = ds;
+      var cls = [];
+      if (op.faixaViagem && ds >= op.faixaViagem[0] && ds <= op.faixaViagem[1]) cls.push("trip");
+      if (op.de && op.ate && ds > op.de && ds < op.ate) cls.push("mid");
+      if (ds === op.sel || ds === op.de || ds === op.ate) cls.push("on");
+      if (op.de && ds === op.de && op.ate && op.ate !== op.de) cls.push("start");
+      if (op.ate && ds === op.ate && op.de && op.ate !== op.de) cls.push("end");
+      if (ds === h) cls.push("today");
+      b.className += " " + cls.join(" ");
+      b.setAttribute("aria-label", dataLonga(ds) + (ds === h ? ", hoje" : ""));
+      if (cls.indexOf("on") >= 0) b.setAttribute("aria-pressed", "true");
+      b.onclick = function () { op.onPick(this.dataset.d); };
+      grid.appendChild(b);
+    }
+    box.appendChild(grid);
+  }
+  box.irPara = function (s) { mes = s.slice(0, 7); desenhar(); };
+  box.atualizar = function (n) { Object.assign(op, n); desenhar(); };
+  desenhar();
+  return box;
+}
+
+/* ---------- Arquivos: Excel e PDF ---------- */
+function carregarScript(url) {
+  return new Promise(function (ok, erro) {
+    if (document.querySelector('script[src="' + url + '"]')) { ok(); return; }
+    var s = document.createElement("script"); s.src = url; s.onload = ok; s.onerror = function () { erro({ code: "lib" }); }; document.head.appendChild(s);
+  });
+}
+function salvarArquivo(nome, blob) {
+  var viaNavegador = function () {
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000); return Promise.resolve();
+  };
+  if (!window.claude || !window.claude.use) return viaNavegador();
+  return window.claude.use("downloads").then(function (dl) {
+    if (!dl) return Promise.reject({ code: "unavailable" });
+    return dl.save({ filename: nome, data: blob });
+  });
+}
+function erroArquivo(e) {
+  var c = e && e.code;
+  if (c === "declined") return;
+  toast(c === "lib" ? "Não consegui carregar o gerador de arquivos. Verifique a internet." : c === "rate_limited" ? "Já há um download esperando sua confirmação." : "Não consegui gerar o arquivo aqui.");
+}
+function nomeArquivo(v, ext) { return "Gastos " + v.destino.replace(/[^\wÀ-ú ,-]/g, "").trim() + " " + v.ida + "." + ext; }
+
+function exportarExcel(v, gs, agrupar) {
+  carregarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js").then(function () {
+    var linhas = [], atual = null, sub = 0;
+    var fechar = function () { if (agrupar === "categoria" && atual) linhas.push({ "Data": "", "Descrição": "Subtotal " + CAT[atual].nome, "Local": "", "Categoria": "", "Pagamento": "", "Valor original": "", "Moeda": "", "Valor em R$": Math.round(sub * 100) / 100 }); };
+    gs.forEach(function (g) {
+      if (agrupar === "categoria" && g.categoria !== atual) { fechar(); atual = g.categoria; sub = 0; }
+      sub += g.valorBRL || 0;
+      linhas.push({ "Data": fmtData(g.data) + "/" + g.data.slice(0, 4), "Descrição": g.descricao || "", "Local": g.local || "", "Categoria": (CAT[g.categoria] || CAT.outros).nome,
+        "Pagamento": g.pagamento ? PAGM[g.pagamento].nome : "", "Valor original": g.valor, "Moeda": g.moeda || "BRL", "Valor em R$": g.valorBRL || 0 });
+    });
+    fechar();
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.json_to_sheet(linhas);
+    ws["!cols"] = [{ wch: 12 }, { wch: 30 }, { wch: 24 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 8 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Gastos");
+    var r = resumoDe(v, gs);
+    var res = [["BFin Travel", "Relatório de gastos"], ["Viagem", v.destino], ["Datas", fmtData(v.ida) + " a " + fmtData(v.volta)], ["Orçamento", v.orcamento || 0], ["Total dos gastos filtrados", Math.round(r.total * 100) / 100], [], ["Categoria", "Total em R$", "% do total"]];
+    CATS.forEach(function (c) { if (r.cat[c.id]) res.push([c.nome, Math.round(r.cat[c.id] * 100) / 100, Math.round(r.cat[c.id] / r.total * 1000) / 10]); });
+    res.push([]); res.push(["Forma de pagamento", "Total em R$"]);
+    PAG.forEach(function (p) { if (r.pag[p.id]) res.push([p.nome, Math.round(r.pag[p.id] * 100) / 100]); });
+    if (r.pag[""]) res.push(["Não informado", Math.round(r.pag[""] * 100) / 100]);
+    var ws2 = XLSX.utils.aoa_to_sheet(res); ws2["!cols"] = [{ wch: 28 }, { wch: 22 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws2, "Resumo");
+    var buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    return salvarArquivo(nomeArquivo(v, "xlsx"), new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  }).then(function (x) { if (x !== undefined || !window.claude) toast("Planilha pronta"); }).catch(erroArquivo);
+}
+function exportarPDF(v, gs, filtrosTxt, agrupar) {
+  carregarScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js").then(function () {
+    var doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+    var W = 210, M = 14, y = 16;
+    var r = resumoDe(v, gs);
+    var real = function (n) { return "R$ " + fmtMoeda(n); };
+    var INK = [16, 28, 41], MUT = [91, 108, 123], MINT = [100, 214, 189], MINTD = [14, 156, 128];
+    doc.setFillColor(16, 28, 41); doc.rect(0, 0, W, 32, "F");
+    doc.setFillColor(MINT[0], MINT[1], MINT[2]); doc.rect(0, 32, W, 1.2, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(247, 249, 250); doc.text("BFin", M, 11);
+    doc.setTextColor(MINT[0], MINT[1], MINT[2]); doc.text("Travel", M + doc.getTextWidth("BFin "), 11);
+    doc.setTextColor(247, 249, 250); doc.setFontSize(17); doc.text("Relatório de gastos", M, 21);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(157, 178, 195); doc.text(v.destino + "  ·  " + fmtData(v.ida) + " a " + fmtData(v.volta), M, 27.5);
+    y = 44;
+    var caixas = [["Total filtrado", real(r.total)], ["Orçamento", real(v.orcamento || 0)], ["Gastos", String(gs.length)]];
+    caixas.forEach(function (c, i) {
+      var x = M + i * 62; doc.setDrawColor(221, 230, 236); doc.setFillColor(247, 249, 250); doc.roundedRect(x, y - 6, 58, 16, 2.5, 2.5, "FD");
+      doc.setFontSize(8.5); doc.setTextColor(MUT[0], MUT[1], MUT[2]); doc.text(c[0], x + 4, y - 1);
+      doc.setFontSize(12.5); doc.setTextColor(INK[0], INK[1], INK[2]); doc.setFont("helvetica", "bold"); doc.text(c[1], x + 4, y + 6); doc.setFont("helvetica", "normal");
+    });
+    y += 18;
+    if (filtrosTxt) { doc.setFontSize(8.5); doc.setTextColor(MUT[0], MUT[1], MUT[2]); doc.text("Filtros: " + filtrosTxt + (agrupar === "categoria" ? " · organizado por categoria" : ""), M, y); y += 6; }
+    doc.setTextColor(INK[0], INK[1], INK[2]); doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Por categoria", M, y); doc.text("Por forma de pagamento", 112, y); doc.setFont("helvetica", "normal");
+    y += 5; doc.setFontSize(9.5);
+    var yc = y, yp = y;
+    CATS.forEach(function (c) { if (!r.cat[c.id]) return; doc.text(c.nome, M, yc); doc.setTextColor(MUT[0], MUT[1], MUT[2]); doc.text(Math.round(r.cat[c.id] / r.total * 100) + "%", 72, yc, { align: "right" }); doc.setTextColor(INK[0], INK[1], INK[2]); doc.text(real(r.cat[c.id]), 98, yc, { align: "right" }); yc += 5; });
+    PAG.concat([{ id: "", nome: "Não informado" }]).forEach(function (p) { if (!r.pag[p.id]) return; doc.text(p.nome, 112, yp); doc.text(real(r.pag[p.id]), W - M, yp, { align: "right" }); yp += 5; });
+    y = Math.max(yc, yp) + 6;
+    var cols = [[M, "Data"], [M + 16, "Descrição / local"], [M + 92, "Categoria"], [M + 128, "Pagamento"], [W - M, "Valor (R$)"]];
+    function cab() {
+      doc.setFillColor(16, 28, 41); doc.rect(M - 2, y - 4.5, W - 2 * M + 4, 7, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(247, 249, 250);
+      cols.forEach(function (c, i) { doc.text(c[1], c[0], y, i === 4 ? { align: "right" } : undefined); });
+      doc.setFont("helvetica", "normal"); doc.setTextColor(INK[0], INK[1], INK[2]); y += 7;
+    }
+    cab();
+    var atual = null, sub = 0;
+    function subtotal() {
+      if (agrupar !== "categoria" || !atual) return;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(MINTD[0], MINTD[1], MINTD[2]);
+      doc.text("Subtotal " + CAT[atual].nome, cols[1][0], y); doc.text(fmtMoeda(sub), cols[4][0], y, { align: "right" });
+      doc.setTextColor(INK[0], INK[1], INK[2]); doc.setFont("helvetica", "normal"); y += 8;
+    }
+    gs.forEach(function (g) {
+      if (agrupar === "categoria" && g.categoria !== atual) {
+        subtotal(); atual = g.categoria; sub = 0;
+        if (y > 266) { doc.addPage(); y = 18; cab(); }
+        doc.setFillColor(MINT[0], MINT[1], MINT[2]); doc.rect(M - 2, y - 4, 1.6, 6, "F");
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text(CAT[g.categoria].nome, M + 2, y);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(MUT[0], MUT[1], MUT[2]);
+        doc.text(Math.round((r.cat[g.categoria] || 0) / r.total * 100) + "% do total", W - M, y, { align: "right" }); doc.setTextColor(INK[0], INK[1], INK[2]);
+        y += 7;
+      }
+      if (y > 280) { doc.addPage(); y = 18; cab(); }
+      sub += g.valorBRL || 0;
+      var desc = [g.descricao, g.local].filter(Boolean).join(" · ") || (CAT[g.categoria] || CAT.outros).nome;
+      desc = doc.splitTextToSize(desc, 72)[0];
+      doc.setFontSize(9);
+      doc.text(fmtData(g.data), cols[0][0], y);
+      doc.text(desc, cols[1][0], y);
+      doc.text((CAT[g.categoria] || CAT.outros).nome, cols[2][0], y);
+      doc.text(g.pagamento ? PAGM[g.pagamento].nome : "-", cols[3][0], y);
+      doc.text(fmtMoeda(g.valorBRL || 0), cols[4][0], y, { align: "right" });
+      if (g.moeda && g.moeda !== "BRL") { doc.setFontSize(7.5); doc.setTextColor(MUT[0], MUT[1], MUT[2]); doc.text(g.moeda + " " + fmtMoeda(g.valor), cols[4][0], y + 3.6, { align: "right" }); doc.setTextColor(INK[0], INK[1], INK[2]); y += 2.5; }
+      doc.setDrawColor(230, 236, 240); doc.line(M - 2, y + 2, W - M + 2, y + 2);
+      y += 6.5;
+    });
+    subtotal();
+    if (y > 275) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Total: " + real(r.total), W - M, y + 3, { align: "right" });
+    var n = doc.getNumberOfPages();
+    for (var p = 1; p <= n; p++) { doc.setPage(p); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(120, 135, 150); doc.text("BFin Travel · Sua viagem, seus gastos, tudo sob controle. · gerado em " + new Date().toLocaleDateString("pt-BR") + " · página " + p + " de " + n, M, 292); }
+    return salvarArquivo(nomeArquivo(v, "pdf"), doc.output("blob"));
+  }).then(function (x) { if (x !== undefined || !window.claude) toast("PDF pronto"); }).catch(erroArquivo);
+}
+/* Ordem dos gastos nos arquivos: por data, ou por categoria (maior total primeiro) e data. */
+function ordenarExport(gs, agrupar) {
+  var l = gs.slice().sort(function (a, b) { return (a.data + (a.criadoEm || "")).localeCompare(b.data + (b.criadoEm || "")); });
+  if (agrupar !== "categoria") return l;
+  var tot = {}; l.forEach(function (g) { tot[g.categoria] = (tot[g.categoria] || 0) + (g.valorBRL || 0); });
+  return l.sort(function (a, b) { return a.categoria === b.categoria ? (a.data + (a.criadoEm || "")).localeCompare(b.data + (b.criadoEm || "")) : tot[b.categoria] - tot[a.categoria]; });
+}
+function resumoDe(v, gs) {
+  var r = { total: 0, cat: {}, pag: {} };
+  gs.forEach(function (g) { var x = g.valorBRL || 0; r.total += x; r.cat[g.categoria] = (r.cat[g.categoria] || 0) + x; var k = g.pagamento || ""; r.pag[k] = (r.pag[k] || 0) + x; });
+  return r;
+}
+
+/* ---------- BFin Travel como app: login Google e planilha no Drive de cada pessoa ----------
+   Usa só a permissão drive.file: o app enxerga apenas os arquivos que ele mesmo criou
+   ou que a pessoa escolheu abrir com ele (planilha compartilhada, pelo seletor do Google). */
+var CONFIG_APP = {
+  CLIENT_ID: "348465724019-42k4ulqengbdobp6023r0pb75r5fble6.apps.googleusercontent.com",
+  API_KEY: "AIzaSyBWyRkPpmkAYm5PdKJCh3otrdXiSAaY65E",
+  APP_ID: "348465724019"
+};
+var GD_NOME = "BFin Travel – dados";
+var GD_CAB = {
+  Viagens: ["id", "destino", "ida", "volta", "orcamento", "atualizado_em", "json"],
+  Gastos: ["id", "viagem_id", "data", "descricao", "local", "categoria", "pagamento", "valor", "moeda", "valor_brl", "atualizado_em", "json"],
+  Lugares: ["id", "viagem_id", "nome", "tipo", "status", "atualizado_em", "json"],
+  Acessos: ["email", "nivel", "atualizado_em"],
+  Compartilhados: ["planilha_id", "dono", "adicionado_em"]
+};
+var GD_COLS = { Viagens: "G", Gastos: "L", Lugares: "G", Acessos: "C", Compartilhados: "C" };
+var GD_ESCOPOS = "openid email profile https://www.googleapis.com/auth/drive.file";
+var SHEETS = "https://sheets.googleapis.com/v4/spreadsheets/";
+var DRIVE = "https://www.googleapis.com/drive/v3/files";
+
+var GD = {
+  token: null, exp: 0, email: "", nome: "", foto: "", cliente: null, minha: null, fontes: [], abas: {}, expirou: false,
+
+  /* ---- Login ---- */
+  carregarGIS: function () { return carregarScript("https://accounts.google.com/gsi/client").then(function () { return new Promise(function (ok) { (function espera() { if (window.google && google.accounts && google.accounts.oauth2) ok(); else setTimeout(espera, 50); })(); }); }); },
+  prepararCliente: function () {
+    if (!GD.cliente) GD.cliente = google.accounts.oauth2.initTokenClient({ client_id: CONFIG_APP.CLIENT_ID, scope: GD_ESCOPOS, callback: function () {} });
+  },
+  /* Chame direto do toque no botão: o pedido de login precisa sair junto com o toque, senão o navegador bloqueia a janela. */
+  entrar: function (prompt) {
+    var pedir = function () {
+      return new Promise(function (ok, erro) {
+        GD.cliente.callback = function (r) {
+          if (r.error) { erro(new Error(r.error === "access_denied" ? "Você não autorizou o acesso." : "O login do Google não foi concluído.")); return; }
+          if (!google.accounts.oauth2.hasGrantedAllScopes(r, "https://www.googleapis.com/auth/drive.file")) { erro(new Error("Para guardar suas viagens, marque a permissão de arquivos do Google Drive e tente de novo.")); return; }
+          GD.token = r.access_token; GD.exp = Date.now() + (Number(r.expires_in || 3600) - 120) * 1000; GD.expirou = false; GD.guardarSessao(); ok();
+        };
+        GD.cliente.error_callback = function (e) { erro(new Error(e && e.type === "popup_closed" ? "A janela de login foi fechada." : e && e.type === "popup_failed_to_open" ? "O navegador bloqueou a janela de login. Libere pop-ups para este site e tente de novo." : "Não consegui abrir o login do Google.")); };
+        var op = { prompt: prompt == null ? "" : prompt };
+        var dica = pref("email"); if (dica && prompt !== "select_account") op.login_hint = dica;
+        GD.cliente.requestAccessToken(op);
+      }).then(function () {
+        return GD.api("https://www.googleapis.com/oauth2/v3/userinfo").then(function (u) {
+          GD.email = String(u.email || "").toLowerCase(); GD.nome = u.name || ""; GD.foto = u.picture || "";
+          pref("email", GD.email); pref("nome", GD.nome); GD.guardarSessao();
+        });
+      });
+    };
+    if (GD.cliente) return pedir();
+    return GD.carregarGIS().then(function () { GD.prepararCliente(); return pedir(); });
+  },
+  /* A sessão do Google dura cerca de 1 hora. Guardamos neste aparelho para não pedir login a cada recarga. */
+  guardarSessao: function () { try { localStorage.setItem("carteira-sessao", JSON.stringify({ t: GD.token, exp: GD.exp, email: GD.email, nome: GD.nome })); } catch (e) {} },
+  retomarSessao: function () {
+    try {
+      var s = JSON.parse(localStorage.getItem("carteira-sessao") || "null");
+      if (!s || !s.t || !s.exp || Date.now() > s.exp - 60000) return false;
+      GD.token = s.t; GD.exp = s.exp; GD.email = s.email || pref("email") || ""; GD.nome = s.nome || pref("nome") || ""; GD.expirou = false;
+      return true;
+    } catch (e) { return false; }
+  },
+  sair: function () {
+    try { if (GD.token) google.accounts.oauth2.revoke(GD.token, function () {}); } catch (e) {}
+    GD.token = null; GD.minha = null; GD.fontes = []; GD.abas = {};
+    try { ["carteira-email", "carteira-nome", "carteira-fonte", "carteira-viagem", "carteira-sessao"].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+  },
+
+  /* ---- Chamadas às APIs do Google ---- */
+  api: function (url, op) {
+    op = op || {};
+    if (!GD.token || Date.now() > GD.exp) { GD.expirou = true; try { localStorage.removeItem("carteira-sessao"); } catch (e) {} return Promise.reject(new Error("Sua sessão expirou. Toque em Continuar para entrar de novo.")); }
+    var h = { Authorization: "Bearer " + GD.token }; if (op.body) h["Content-Type"] = "application/json";
+    return fetch(url, { method: op.method || "GET", headers: h, body: op.body ? JSON.stringify(op.body) : undefined }).then(function (r) {
+      if (r.status === 401) { GD.expirou = true; try { localStorage.removeItem("carteira-sessao"); } catch (e) {} throw new Error("Sua sessão expirou. Toque em Continuar para entrar de novo."); }
+      if (r.status === 429) throw new Error("Muitos pedidos agora. Espere um minuto e tente de novo.");
+      if (r.status === 403) return r.text().then(function (t) {
+        var msg = ""; try { var j = JSON.parse(t); msg = (j.error && j.error.message) || ""; } catch (e) { msg = t || ""; }
+        if (/has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(msg + t)) {
+          var api = /sheets/i.test(url) ? "Google Sheets API" : /drive/i.test(url) ? "Google Drive API" : "API do Google";
+          throw new Error("A " + api + " ainda não está ativada no projeto do Google Cloud. Ative-a em APIs e serviços > Biblioteca, espere 2 minutos e recarregue.");
+        }
+        if (/insufficient|scope/i.test(msg)) throw new Error("Faltou autorizar o acesso aos arquivos do Drive. Toque em Sair e entre de novo marcando a caixa do Google Drive.");
+        throw new Error("Você não tem permissão para mexer nessa planilha." + (msg ? " (Google: " + msg + ")" : ""));
+      });
+      if (r.status === 404) throw new Error("Planilha não encontrada. Ela pode ter sido apagada ou o acesso foi retirado.");
+      if (!r.ok) throw new Error("O Google respondeu com erro (" + r.status + "). Tente de novo.");
+      return r.status === 204 ? null : r.text().then(function (t) { return t ? JSON.parse(t) : null; });
+    });
+  },
+  ler: function (id, ranges) {
+    return GD.api(SHEETS + id + "/values:batchGet?" + ranges.map(function (x) { return "ranges=" + encodeURIComponent(x); }).join("&")).then(function (r) { return (r.valueRanges || []).map(function (v) { return v.values || []; }); });
+  },
+  idsAbas: function (id) {
+    if (GD.abas[id]) return Promise.resolve(GD.abas[id]);
+    return GD.api(SHEETS + id + "?fields=sheets.properties(sheetId,title)").then(function (r) {
+      var m = {}; (r.sheets || []).forEach(function (s) { m[s.properties.title] = s.properties.sheetId; }); GD.abas[id] = m; return m;
+    });
+  },
+  /* Garante as abas e cabeçalhos (também atualiza planilhas antigas). */
+  prepararAbas: function (id) {
+    return GD.idsAbas(id).then(function (m) {
+      var faltam = Object.keys(GD_CAB).filter(function (n) { return m[n] === undefined; });
+      if (!m.Sobre) faltam.push("Sobre");
+      if (!faltam.length) return;
+      return GD.api(SHEETS + id + ":batchUpdate", { method: "POST", body: { requests: faltam.map(function (n) { return { addSheet: { properties: { title: n } } }; }) } }).then(function () {
+        delete GD.abas[id];
+        return GD.cabecalhos(id, faltam);
+      });
+    });
+  },
+  /* Escreve a linha de títulos (linha 1) das abas indicadas. */
+  cabecalhos: function (id, nomes) {
+    var data = nomes.filter(function (n) { return GD_CAB[n]; }).map(function (n) { return { range: n + "!A1", values: [GD_CAB[n]] }; });
+    if (nomes.indexOf("Sobre") >= 0) data.push({ range: "Sobre!A1", values: [["BFin Travel – dados"], ["Esta planilha guarda as suas viagens, gastos e lugares. Não renomeie as abas nem as colunas."], ["A coluna json é a que o app usa. As outras colunas são só para você ler e filtrar."], ["© 2026 BFin Travel by Robinson Borborema. Todos os direitos reservados."]] });
+    return GD.api(SHEETS + id + "/values:batchUpdate", { method: "POST", body: { valueInputOption: "RAW", data: data } });
+  },
+  /* A planilha da pessoa: procura a que o app criou no Drive dela; se não houver, cria. */
+  minhaPlanilha: function () {
+    if (GD.minha) return Promise.resolve(GD.minha);
+    var q = "appProperties has { key='bfin' and value='dados' } and 'me' in owners and trashed=false";
+    return GD.api(DRIVE + "?q=" + encodeURIComponent(q) + "&fields=files(id,createdTime)&orderBy=createdTime&spaces=drive").then(function (r) {
+      if (r.files && r.files.length) { GD.minha = r.files[0].id; return GD.prepararAbas(GD.minha).then(function () { return GD.minha; }); }
+      return GD.api(SHEETS, { method: "POST", body: { properties: { title: GD_NOME, locale: "pt_BR" }, sheets: ["Viagens", "Gastos", "Lugares", "Acessos", "Compartilhados", "Sobre"].map(function (n) { return { properties: { title: n } }; }) } }).then(function (s) {
+        GD.minha = s.spreadsheetId;
+        return GD.api(DRIVE + "/" + GD.minha, { method: "PATCH", body: { appProperties: { bfin: "dados" } } })
+          .then(function () { return GD.cabecalhos(GD.minha, Object.keys(GD_CAB).concat("Sobre")); }).then(function () { return GD.minha; });
+      });
+    });
+  },
+  linhaDe: function (aba, o) {
+    var agora = new Date().toISOString(), json = JSON.stringify(o);
+    if (json.length > 49000) throw new Error("Registro grande demais para a planilha.");
+    if (aba === "Viagens") return [o.id, o.destino || "", o.ida || "", o.volta || "", String(o.orcamento || 0), agora, json];
+    if (aba === "Gastos") return [o.id, o.viagemId || "", o.data || "", o.descricao || "", o.local || "", o.categoria || "", o.pagamento || "", String(o.valor || 0), o.moeda || "BRL", String(o.valorBRL || 0), agora, json];
+    return [o.id, o.viagemId || "", o.nome || "", o.tipo || "", o.status || "", agora, json];
+  },
+  gravar: function (id, aba, linha) {
+    return GD.api(SHEETS + id + "/values/" + encodeURIComponent(aba + "!A:A")).then(function (r) {
+      var ids = (r.values || []).map(function (l) { return String(l[0] || ""); });
+      var i = ids.indexOf(String(linha[0]));
+      if (i >= 1) return GD.api(SHEETS + id + "/values/" + encodeURIComponent(aba + "!A" + (i + 1) + ":" + GD_COLS[aba] + (i + 1)) + "?valueInputOption=RAW", { method: "PUT", body: { values: [linha] } });
+      return GD.api(SHEETS + id + "/values/" + encodeURIComponent(aba + "!A1") + ":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS", { method: "POST", body: { values: [linha] } });
+    });
+  },
+  apagarOnde: function (id, aba, teste) {
+    return Promise.all([GD.idsAbas(id), GD.api(SHEETS + id + "/values/" + encodeURIComponent(aba + "!A:" + GD_COLS[aba]))]).then(function (x) {
+      var sheetId = x[0][aba], linhas = x[1].values || [], req = [];
+      for (var i = linhas.length - 1; i >= 1; i--) if (teste(linhas[i])) req.push({ deleteDimension: { range: { sheetId: sheetId, dimension: "ROWS", startIndex: i, endIndex: i + 1 } } });
+      if (!req.length) return null;
+      return GD.api(SHEETS + id + ":batchUpdate", { method: "POST", body: { requests: req } });
+    });
+  },
+  parse: function (linhas, col) {
+    return linhas.map(function (l) { try { var o = JSON.parse(l[col]); o.id = String(l[0]); return o; } catch (e) { return null; } }).filter(function (o) { return o; });
+  },
+  nivelDe: function (fonteId) {
+    if (fonteId === GD.minha) return "dono";
+    var f = GD.fontes.filter(function (x) { return x.id === fonteId; })[0];
+    return f ? f.nivel : null;
+  },
+  exigir: function (fonteId) {
+    var n = GD.nivelDe(fonteId);
+    if (!n) return Promise.reject(new Error("Você não tem acesso a esses dados."));
+    if (n === "ver") return Promise.reject(new Error("Você tem acesso só para ver estes dados."));
+    return Promise.resolve();
+  },
+
+  /* ---- As mesmas funções que a tela chama na versão do Apps Script ---- */
+  iniciar: function () {
+    return GD.minhaPlanilha().then(function (minha) {
+      return GD.ler(minha, ["Compartilhados!A2:C"]).then(function (x) {
+        var ids = x[0].map(function (l) { return String(l[0]); }).filter(Boolean);
+        return Promise.all(ids.map(function (sid) {
+          return GD.api(DRIVE + "/" + sid + "?fields=id,name,trashed,owners(displayName,emailAddress),capabilities(canEdit)").then(function (f) {
+            if (f.trashed) return null;
+            var dono = f.owners && f.owners[0] ? (f.owners[0].displayName || f.owners[0].emailAddress) : "outra pessoa";
+            return { id: f.id, nome: "Viagens de " + dono, nivel: f.capabilities && f.capabilities.canEdit ? "editar" : "ver" };
+          }).catch(function () { return null; });
+        }));
+      }).then(function (outras) {
+        GD.fontes = [{ id: minha, nome: "Minhas viagens", nivel: "dono", url: "https://docs.google.com/spreadsheets/d/" + minha }].concat(outras.filter(Boolean));
+        return { email: GD.email, fontes: GD.fontes };
+      });
+    });
+  },
+  carregar: function (fonteId) {
+    var n = GD.nivelDe(fonteId);
+    if (!n) return Promise.reject(new Error("Você não tem acesso a esses dados."));
+    return GD.ler(fonteId, ["Viagens!A2:G", "Gastos!A2:L", "Lugares!A2:G"]).then(function (x) {
+      return { nivel: n, viagens: GD.parse(x[0], 6), gastos: GD.parse(x[1], 11), lugares: GD.parse(x[2], 6) };
+    });
+  },
+  salvarViagem: function (f, v) { return GD.exigir(f).then(function () { return GD.gravar(f, "Viagens", GD.linhaDe("Viagens", v)); }); },
+  salvarGasto: function (f, g) { return GD.exigir(f).then(function () { return GD.gravar(f, "Gastos", GD.linhaDe("Gastos", g)); }); },
+  salvarLugar: function (f, l) { return GD.exigir(f).then(function () { return GD.gravar(f, "Lugares", GD.linhaDe("Lugares", l)); }); },
+  apagarGasto: function (f, id) { return GD.exigir(f).then(function () { return GD.apagarOnde(f, "Gastos", function (l) { return String(l[0]) === String(id); }); }); },
+  apagarLugar: function (f, id) { return GD.exigir(f).then(function () { return GD.apagarOnde(f, "Lugares", function (l) { return String(l[0]) === String(id); }); }); },
+  apagarViagem: function (f, id) {
+    return GD.exigir(f).then(function () { return GD.apagarOnde(f, "Gastos", function (l) { return String(l[1]) === String(id); }); })
+      .then(function () { return GD.apagarOnde(f, "Lugares", function (l) { return String(l[1]) === String(id); }); })
+      .then(function () { return GD.apagarOnde(f, "Viagens", function (l) { return String(l[0]) === String(id); }); });
+  },
+  salvarLote: function (f, v, gastos) {
+    return GD.exigir(f).then(function () { return GD.gravar(f, "Viagens", GD.linhaDe("Viagens", v)); }).then(function () {
+      var linhas = (gastos || []).map(function (g) { return GD.linhaDe("Gastos", g); });
+      if (!linhas.length) return null;
+      return GD.api(SHEETS + f + "/values/" + encodeURIComponent("Gastos!A1") + ":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS", { method: "POST", body: { values: linhas } });
+    });
+  },
+
+  /* ---- Acesso aos seus dados por e-mail (compartilhamento do Drive) ---- */
+  listarAcessos: function () {
+    return GD.minhaPlanilha().then(function (m) { return GD.ler(m, ["Acessos!A2:B"]); }).then(function (x) {
+      return x[0].filter(function (l) { return l[0]; }).map(function (l) { return { email: String(l[0]), nivel: String(l[1] || "ver") }; });
+    });
+  },
+  permissoes: function (m) { return GD.api(DRIVE + "/" + m + "/permissions?fields=permissions(id,emailAddress,role)").then(function (r) { return r.permissions || []; }); },
+  concederAcesso: function (email, nivel) {
+    email = String(email || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return Promise.reject(new Error("E-mail inválido."));
+    if (email === GD.email) return Promise.reject(new Error("Esse é o seu próprio e-mail."));
+    var papel = nivel === "editar" ? "writer" : "reader";
+    return GD.minhaPlanilha().then(function (m) {
+      return GD.permissoes(m).then(function (ps) {
+        var p = ps.filter(function (x) { return String(x.emailAddress || "").toLowerCase() === email; })[0];
+        if (p) return GD.api(DRIVE + "/" + m + "/permissions/" + p.id, { method: "PATCH", body: { role: papel } });
+        return GD.api(DRIVE + "/" + m + "/permissions?sendNotificationEmail=true&emailMessage=" + encodeURIComponent("Você recebeu acesso às viagens no BFin Travel. Abra o app, entre com esta conta e toque em Conta e acesso > Abrir dados compartilhados comigo."), { method: "POST", body: { role: papel, type: "user", emailAddress: email } });
+      }).catch(function (e) { throw new Error(/permiss/i.test(e.message) ? e.message : "Não consegui compartilhar com " + email + ". Confira se é um e-mail de conta Google."); })
+        .then(function () { return GD.apagarOnde(m, "Acessos", function (l) { return String(l[0]).toLowerCase() === email; }); })
+        .then(function () { return GD.api(SHEETS + m + "/values/" + encodeURIComponent("Acessos!A1") + ":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS", { method: "POST", body: { values: [[email, nivel, new Date().toISOString()]] } }); });
+    }).then(GD.listarAcessos);
+  },
+  removerAcesso: function (email) {
+    email = String(email || "").trim().toLowerCase();
+    return GD.minhaPlanilha().then(function (m) {
+      return GD.permissoes(m).then(function (ps) {
+        var p = ps.filter(function (x) { return String(x.emailAddress || "").toLowerCase() === email && x.role !== "owner"; })[0];
+        return p ? GD.api(DRIVE + "/" + m + "/permissions/" + p.id, { method: "DELETE" }) : null;
+      }).then(function () { return GD.apagarOnde(m, "Acessos", function (l) { return String(l[0]).toLowerCase() === email; }); });
+    }).then(GD.listarAcessos);
+  },
+
+  /* ---- Abrir a planilha que alguém compartilhou com você (seletor do Google) ---- */
+  abrirCompartilhado: function () {
+    return carregarScript("https://apis.google.com/js/api.js").then(function () { return new Promise(function (ok) { gapi.load("picker", ok); }); }).then(function () {
+      return new Promise(function (ok) {
+        var vista = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setOwnedByMe(false).setMode(google.picker.DocsViewMode.LIST).setQuery("BFin Travel");
+        new google.picker.PickerBuilder().setAppId(CONFIG_APP.APP_ID).setOAuthToken(GD.token).setDeveloperKey(CONFIG_APP.API_KEY).setLocale("pt-BR")
+          .setTitle("Escolha a planilha \"BFin Travel – dados\" compartilhada com você").addView(vista)
+          .setCallback(function (d) { if (d.action === google.picker.Action.PICKED) ok(d.docs[0].id); else if (d.action === google.picker.Action.CANCEL) ok(null); })
+          .build().setVisible(true);
+      });
+    }).then(function (id) {
+      if (!id) return null;
+      if (id === GD.minha) throw new Error("Essa é a sua própria planilha.");
+      return GD.minhaPlanilha().then(function (m) {
+        return GD.apagarOnde(m, "Compartilhados", function (l) { return String(l[0]) === id; })
+          .then(function () { return GD.api(SHEETS + m + "/values/" + encodeURIComponent("Compartilhados!A1") + ":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS", { method: "POST", body: { values: [[id, "", new Date().toISOString()]] } }); });
+      }).then(function () { return id; });
+    });
+  },
+  esquecerCompartilhado: function (id) {
+    return GD.minhaPlanilha().then(function (m) { return GD.apagarOnde(m, "Compartilhados", function (l) { return String(l[0]) === id; }); });
+  },
+  chamar: function (fn, args) {
+    if (!GD[fn]) return Promise.reject(new Error("Função desconhecida: " + fn));
+    try { return Promise.resolve(GD[fn].apply(null, args || [])); } catch (e) { return Promise.reject(e); }
+  }
+};
+
+/* ---------- Somente no app: entrada, sessão, instalação ---------- */
+var LOGO_SVG = '<svg width="96" height="96" viewBox="0 0 100 100" aria-hidden="true"><path d="M28 37 L58 21.5 a7.5 7.5 0 0 1 9.8 3.2 L74 36.5" fill="none" stroke="#f7f9fa" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M21.5 66 V47 a9.5 9.5 0 0 1 9.5-9.5 H75.5 a9.5 9.5 0 0 1 9.5 9.5 V72 a9.5 9.5 0 0 1 -9.5 9.5 H32" fill="none" stroke="#f7f9fa" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="66" y="50.5" width="21.5" height="15.5" rx="7.5" fill="#f7f9fa"/><circle cx="73.3" cy="58.2" r="2.7" fill="#0a121b"/><path d="M17.2 64.5 C9.5 71 8.6 78.2 15.2 79.2 C23.8 80.4 33.6 74.6 40.6 69.2 L38.2 66.4 C31.6 70.6 23 74.4 18.4 73.6 C14.8 73 14.6 69.4 17.2 64.5 Z" fill="#64d6bd"/><g transform="translate(36.5 45.5) rotate(48 12 12)"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" fill="#64d6bd"/></g></svg>';
+var G_ICON = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+var appConfigurado = CONFIG_APP.CLIENT_ID.indexOf("COLE_AQUI") < 0;
+
+function renderLogin(main) {
+  var c = el("div", "card login");
+  var lg = el("div", "loginlogo"); lg.innerHTML = LOGO_SVG; c.appendChild(lg);
+  c.appendChild(el("h2", null, "Bem-vindo ao BFin Travel"));
+  c.appendChild(el("p", "muted", "Planeje quanto pode gastar e acompanhe cada gasto da viagem, do primeiro ao último dia."));
+  if (!appConfigurado) { c.appendChild(el("p", "notice", "Este app ainda não foi configurado: falta colocar o ID do cliente, a chave de API e o número do projeto no arquivo index.html.")); main.appendChild(c); return; }
+  var conhecido = pref("email");
+  var b = el("button", "gbtn"); b.type = "button"; b.disabled = !Store.gisPronto || Store.entrando;
+  var ic = document.createElement("span"); ic.innerHTML = G_ICON; b.appendChild(ic.firstChild);
+  b.appendChild(document.createTextNode(Store.entrando ? "Entrando…" : !Store.gisPronto ? "Carregando…" : conhecido ? "Continuar como " + conhecido : "Entrar com Google"));
+  b.onclick = function () { fazerLogin(""); };
+  c.appendChild(b);
+  if (conhecido && Store.gisPronto) { var o = el("button", "linkbtn", "Usar outra conta"); o.type = "button"; o.onclick = function () { fazerLogin("select_account"); }; c.appendChild(o); }
+  if (Store.erroLogin) c.appendChild(el("p", "notice", Store.erroLogin));
+  var info = el("div", "loginfo");
+  [["Database", "Seus dados ficam numa planilha no seu Google Drive."], ["Lock", "O app só acessa os arquivos que ele mesmo cria. Nada mais do seu Drive."], ["Users", "Você escolhe quem pode ver ou editar as suas viagens."]].forEach(function (x) { info.appendChild(el("p", "hint", "• " + x[1])); });
+  c.appendChild(info);
+  var lk = el("a", null, "Política de privacidade"); lk.href = "privacidade.html"; lk.target = "_blank"; lk.rel = "noopener"; lk.className = "plink"; c.appendChild(lk);
+  main.appendChild(c);
+}
+function fazerLogin(prompt) {
+  Store.entrando = true; Store.erroLogin = "";
+  var p = GD.entrar(prompt); render();
+  p.then(function () { Store.entrando = false; Store.modo = "carregando"; render(); Store.iniciar(); })
+    .catch(function (e) { Store.entrando = false; Store.erroLogin = e.message; render(); });
+}
+function renovarSessao() {
+  GD.entrar("").then(function () { GD.expirou = false; toast("Sessão renovada"); Store.carregarFonte(); }).catch(function (e) { toast(e.message); });
+}
+function sairDoApp() { GD.sair(); fecharFolha(); Store.modo = "login"; Store.viagens = []; Store.gastos = []; Store.lugares = []; Store.fontes = []; Store.viagemId = null; render(); }
+function appBoot() {
+  Store.gisPronto = false;
+  var retomou = appConfigurado && GD.retomarSessao();
+  if (retomou) { Store.modo = "carregando"; render(); Store.iniciar(); }
+  else { Store.modo = "login"; render(); }
+  if (!appConfigurado) return;
+  GD.carregarGIS().then(function () { GD.prepararCliente(); Store.gisPronto = true; if (Store.modo === "login") render(); })
+    .catch(function () { if (Store.modo === "login") { Store.erroLogin = "Não consegui carregar o login do Google. Verifique a internet e recarregue."; render(); } });
+}
+/* Instalação como app */
+var pedidoInstalar = null;
+window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); pedidoInstalar = e; var b = $("instalarBtn"); if (b) b.hidden = false; });
+window.addEventListener("appinstalled", function () { var b = $("instalarBtn"); if (b) b.hidden = true; toast("BFin Travel instalado"); });
+if ("serviceWorker" in navigator && location.protocol === "https:") { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }
+
+/* ---------- Apoio por Pix e links de parceiros ---------- */
+var APOIO = { chave: "e7b51556-e54d-47bc-975b-43610cd9c1d4", nome: "Robinson Borborema", cidade: "CUIABA" };
+/* Links de afiliado: preencha "url" quando o programa aprovar. Sem url, o item não aparece. */
+var PARCEIROS = [
+  { nome: "Hospedagem", desc: "Compare hotéis e pousadas", url: "" },
+  { nome: "Passagens", desc: "Voos e ônibus", url: "" },
+  { nome: "Seguro-viagem", desc: "Viaje com tranquilidade", url: "" },
+  { nome: "Aluguel de carro", desc: "Retire no destino", url: "" }
+];
+function crc16(s) { var c = 0xFFFF; for (var i = 0; i < s.length; i++) { c ^= s.charCodeAt(i) << 8; for (var j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF; } return ("0000" + c.toString(16).toUpperCase()).slice(-4); }
+function tlv(id, v) { return id + ("0" + v.length).slice(-2) + v; }
+function pixCopiaECola() {
+  var conta = tlv("00", "BR.GOV.BCB.PIX") + tlv("01", APOIO.chave);
+  var p = tlv("00", "01") + tlv("26", conta) + tlv("52", "0000") + tlv("53", "986") + tlv("58", "BR") + tlv("59", APOIO.nome.slice(0, 25)) + tlv("60", APOIO.cidade.slice(0, 15)) + tlv("62", tlv("05", "***")) + "6304";
+  return p + crc16(p);
+}
+function copiar(texto, aviso) {
+  var ok = function () { toast(aviso); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(ok, function () { toast("Não consegui copiar. Segure e copie o texto."); });
+  else { var t = document.createElement("textarea"); t.value = texto; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); ok(); } catch (e) { toast("Não consegui copiar."); } t.remove(); }
+}
+function abrirApoio() {
+  var sh = folha("Apoie o BFin Travel");
+  sh.appendChild(el("p", "hint", "O BFin Travel é gratuito. Se ele te ajudou na viagem, você pode apoiar com qualquer valor por Pix. Isso ajuda a manter e melhorar o app."));
+  var c = el("div", "acc"); c.appendChild(el("b", null, "Chave Pix (aleatória)"));
+  var k = el("p", "hint", APOIO.chave); k.style.wordBreak = "break-all"; k.style.userSelect = "all"; c.appendChild(k);
+  var b1 = el("button", "btn", "Copiar chave Pix"); b1.type = "button"; b1.style.justifySelf = "start"; b1.onclick = function () { copiar(APOIO.chave, "Chave Pix copiada"); }; c.appendChild(b1);
+  var b2 = el("button", "btn", "Copiar Pix copia e cola"); b2.type = "button"; b2.style.justifySelf = "start"; b2.onclick = function () { copiar(pixCopiaECola(), "Pix copia e cola copiado"); }; c.appendChild(b2);
+  c.appendChild(el("p", "hint", "No app do seu banco, escolha Pix e cole. O nome que aparece é " + APOIO.nome + "."));
+  sh.appendChild(c);
+  sh.appendChild(el("p", "hint", "Obrigado! Apoiar é totalmente opcional."));
+}
+function cardParceiros() {
+  var lista = PARCEIROS.filter(function (p) { return p.url; });
+  if (!lista.length) return null;
+  var c = el("div", "card"); c.style.marginTop = "16px";
+  var h = el("h2", null, "Parceiros de viagem"); h.appendChild(el("small", null, "links de parceiros")); c.appendChild(h);
+  var g = el("div", "explore");
+  lista.forEach(function (p) {
+    var a = el("a", "exp"); a.href = p.url; a.target = "_blank"; a.rel = "noopener noreferrer sponsored";
+    var t = el("div"); t.appendChild(el("b", null, p.nome)); t.appendChild(el("span", "hint", p.desc)); a.appendChild(t); a.appendChild(el("span", "hint", "↗")); g.appendChild(a);
+  });
+  c.appendChild(g);
+  c.appendChild(el("p", "hint", "Ao comprar por esses links, o BFin Travel pode receber uma comissão, sem custo extra para você."));
+  return c;
+}
+function cardApoio() {
+  var c = el("div", "card apoio");
+  var t = el("div", "apoiotx");
+  t.appendChild(el("b", null, "Gostou do BFin Travel?"));
+  t.appendChild(el("span", "hint", "O app é gratuito. Se ele te ajudou na viagem, você pode apoiar com qualquer valor por Pix."));
+  c.appendChild(t);
+  var b = el("button", "btn solid", "♥ Apoiar com Pix"); b.type = "button"; b.onclick = abrirApoio; c.appendChild(b);
+  return c;
+}
+
+/* ---------- Aviso de nova versão ---------- */
+var BUILD = "20261112-095448";
+var avisouVersao = false;
+function checarVersao() {
+  if (avisouVersao || location.protocol !== "https:") return;
+  fetch("index.html?c=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
+    var m = t.match(/<meta name="build" content="([^"]+)"/);
+    if (!m || m[1] === BUILD) return;
+    avisouVersao = true;
+    var b = el("div", "updbar"); b.setAttribute("role", "status");
+    b.appendChild(el("span", null, "Nova versão do BFin Travel disponível."));
+    var bt = el("button", "btn solid", "Atualizar"); bt.type = "button";
+    bt.onclick = function () {
+      bt.disabled = true; bt.textContent = "Atualizando…";
+      var fim = function () { location.replace(location.pathname + "?v=" + encodeURIComponent(m[1])); };
+      var p = [];
+      if ("caches" in window) p.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }));
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) p.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+      Promise.all(p).then(fim, fim);
+    };
+    b.appendChild(bt); document.body.appendChild(b);
+  }).catch(function () {});
+}
+setTimeout(checarVersao, 2500);
+document.addEventListener("visibilitychange", function () { if (!document.hidden) checarVersao(); });
+setInterval(checarVersao, 300000);
+
+/* ---------- Armazenamento ----------
+   Três modos, com a mesma interface para o resto da página:
+   "gas"   = Google Apps Script: cada pessoa tem a planilha dela no Drive; dados compartilhados por e-mail.
+   "db"    = banco do Claude: cada pessoa tem a área privada dela.
+   "local" = só neste navegador. */
+var GAS = typeof GD !== "undefined" || (typeof google !== "undefined" && google.script && google.script.run) ? true : false;
+function chamar(fn, args) {
+  if (typeof GD !== "undefined") return GD.chamar(fn, args);
+  return new Promise(function (ok, erro) { var r = google.script.run.withSuccessHandler(ok).withFailureHandler(erro); r[fn].apply(r, args || []); });
+}
+var SOMENTE_LEITURA = { code: "somente_leitura" };
+var Store = {
+  modo: "carregando", db: null, uid: null, user: null, viagens: [], gastos: [], lugares: [], viagemId: null, unsubG: null, unsubL: null,
+  email: "", fontes: [], fonte: null, nivel: "dono", tudo: { gastos: [], lugares: [] },
+  podeEditar: function () { return Store.modo !== "gas" || Store.nivel !== "ver"; },
+  local: function () { try { var d = JSON.parse(localStorage.getItem("carteira-dados") || "{}"); d.viagens = d.viagens || []; d.gastos = d.gastos || {}; d.lugares = d.lugares || {}; return d; } catch (e) { return { viagens: [], gastos: {}, lugares: {} }; } },
+  gravarLocal: function (d) { try { localStorage.setItem("carteira-dados", JSON.stringify(d)); } catch (e) {} },
+  col: function () { return Store.db.collection("data/users/" + Store.uid); },
+  iniciar: function () {
+    if (GAS) {
+      chamar("iniciar").then(function (r) {
+        Store.modo = "gas"; Store.email = r.email; Store.fontes = r.fontes;
+        var f = pref("fonte"); Store.fonte = Store.fontes.some(function (x) { return x.id === f; }) ? f : Store.fontes[0].id;
+        Store.carregarFonte();
+      }).catch(function (e) { if (typeof GD !== "undefined" && GD.expirou) { GD.expirou = false; Store.modo = "login"; render(); return; } Store.modo = "erro"; Store.erro = (e && e.message) || String(e); render(); });
+      return;
+    }
+    var pronto = false;
+    var usarLocal = function () {
+      if (pronto) return; pronto = true; Store.modo = "local";
+      Store.viagens = Store.local().viagens; Store.escolher(pref("viagem")); render();
+    };
+    if (!window.claude || !window.claude.use) { usarLocal(); return; }
+    var timer = setTimeout(usarLocal, 10000);
+    Promise.all([window.claude.use("db"), window.claude.use("user")]).then(function (r) {
+      var db = r[0], user = r[1];
+      if (!db || !user) { clearTimeout(timer); usarLocal(); return; }
+      return user.id().then(function (uid) {
+        if (!uid) { clearTimeout(timer); usarLocal(); return; }
+        if (pronto) return;
+        Store.db = db; Store.uid = uid; Store.user = user;
+        Store.col().onSnapshot(function (snap) {
+          if (!pronto) { pronto = true; clearTimeout(timer); Store.modo = "db"; }
+          Store.viagens = snap.docs.map(function (d) { var x = Object.assign({}, d.data()); x.id = d.id; return x; }).filter(function (v) { return v.tipo === "viagem"; });
+          Store.viagens.sort(function (a, b) { return (b.ida || "").localeCompare(a.ida || ""); });
+          if (!Store.viagemId || !Store.viagens.some(function (v) { return v.id === Store.viagemId; })) Store.escolher(pref("viagem"));
+          else render();
+        }, function () { clearTimeout(timer); usarLocal(); });
+      });
+    }).catch(function () { clearTimeout(timer); usarLocal(); });
+  },
+  carregarFonte: function () {
+    Store.modo = "gas"; Store.carregando = true; render();
+    return chamar("carregar", [Store.fonte]).then(function (d) {
+      Store.carregando = false; Store.nivel = d.nivel;
+      Store.viagens = d.viagens.sort(function (a, b) { return (b.ida || "").localeCompare(a.ida || ""); });
+      Store.tudo = { gastos: d.gastos, lugares: d.lugares };
+      pref("fonte", Store.fonte);
+      Store.escolher(Store.viagemId || pref("viagem"));
+    }).catch(function (e) { Store.carregando = false; toast((e && e.message) || "Não consegui abrir esses dados."); render(); });
+  },
+  trocarFonte: function (id) { Store.fonte = id; Store.viagemId = null; Store.carregarFonte(); },
+  escolher: function (id) {
+    var v = Store.viagens.filter(function (x) { return x.id === id; })[0] || (id && Store.modo === "db" && Store.pendente === id ? { id: id } : null) || Store.viagens[0] || null;
+    Store.viagemId = v ? v.id : null; if (v) pref("viagem", v.id);
+    if (Store.unsubG) { Store.unsubG(); Store.unsubG = null; }
+    if (Store.unsubL) { Store.unsubL(); Store.unsubL = null; }
+    Store.gastos = []; Store.lugares = [];
+    if (!v) { render(); return; }
+    if (Store.modo === "db") {
+      var ref = Store.col().doc(v.id);
+      Store.unsubG = ref.collection("gastos").onSnapshot(function (snap) {
+        if (Store.viagemId !== v.id) return;
+        Store.gastos = snap.docs.map(function (d) { var x = Object.assign({}, d.data()); x.id = d.id; return x; }); render();
+      }, function () { toast("Não consegui ler os gastos agora."); });
+      Store.unsubL = ref.collection("lugares").onSnapshot(function (snap) {
+        if (Store.viagemId !== v.id) return;
+        Store.lugares = snap.docs.map(function (d) { var x = Object.assign({}, d.data()); x.id = d.id; return x; }); render();
+      }, function () {});
+    } else if (Store.modo === "gas") {
+      Store.gastos = Store.tudo.gastos.filter(function (g) { return g.viagemId === v.id; });
+      Store.lugares = Store.tudo.lugares.filter(function (l) { return l.viagemId === v.id; });
+    } else {
+      var d = Store.local(); Store.gastos = (d.gastos[v.id] || []).slice(); Store.lugares = (d.lugares[v.id] || []).slice();
+    }
+    render();
+  },
+  /* Guarda de escrita e falha no servidor: avisa e recarrega para não ficar diferente da planilha. */
+  gas: function (fn, args) {
+    return chamar(fn, [Store.fonte].concat(args)).catch(function (e) { toast((e && e.message) || "Não consegui salvar na planilha."); if (!(typeof GD !== "undefined" && GD.expirou)) Store.carregarFonte(); else render(); throw e; });
+  },
+  salvarViagem: function (v) {
+    if (!Store.podeEditar()) return Promise.reject(SOMENTE_LEITURA);
+    var corpo = Object.assign({}, v); delete corpo.id; delete corpo._totalTemp; corpo.tipo = "viagem";
+    if (Store.modo === "db") return Store.col().doc(v.id).set(corpo);
+    if (Store.modo === "gas") {
+      var obj = Object.assign({ id: v.id }, corpo);
+      Store.viagens = Store.viagens.filter(function (x) { return x.id !== v.id; }).concat([obj]).sort(function (a, b) { return (b.ida || "").localeCompare(a.ida || ""); });
+      render(); return Store.gas("salvarViagem", [obj]);
+    }
+    var d = Store.local(); d.viagens = d.viagens.filter(function (x) { return x.id !== v.id; }).concat([Object.assign({ id: v.id }, corpo)]);
+    Store.gravarLocal(d); Store.viagens = d.viagens; render(); return Promise.resolve();
+  },
+  apagarViagem: function (id) {
+    if (!Store.podeEditar()) return Promise.reject(SOMENTE_LEITURA);
+    if (Store.modo === "db") {
+      var ref = Store.col().doc(id);
+      var apagarCol = function (nome) { return ref.collection(nome).get().then(function (s) { return Promise.all(s.docs.map(function (g) { return ref.collection(nome).doc(g.id).delete(); })); }); };
+      return apagarCol("gastos").then(function () { return apagarCol("lugares"); }).then(function () { return ref.delete(); });
+    }
+    if (Store.modo === "gas") {
+      Store.viagens = Store.viagens.filter(function (x) { return x.id !== id; });
+      Store.tudo.gastos = Store.tudo.gastos.filter(function (g) { return g.viagemId !== id; });
+      Store.tudo.lugares = Store.tudo.lugares.filter(function (l) { return l.viagemId !== id; });
+      Store.escolher(null); return Store.gas("apagarViagem", [id]);
+    }
+    var d = Store.local(); d.viagens = d.viagens.filter(function (x) { return x.id !== id; }); delete d.gastos[id]; delete d.lugares[id];
+    Store.gravarLocal(d); Store.viagens = d.viagens; Store.escolher(null); return Promise.resolve();
+  },
+  _salvarItem: function (tipo, item) {
+    if (!Store.podeEditar()) return Promise.reject(SOMENTE_LEITURA);
+    var corpo = Object.assign({}, item); delete corpo.id; corpo.viagemId = Store.viagemId;
+    var lista = tipo === "gastos" ? "gastos" : "lugares";
+    if (Store.modo === "db") return Store.col().doc(Store.viagemId).collection(lista).doc(item.id).set(corpo);
+    var obj = Object.assign({ id: item.id }, corpo);
+    if (Store.modo === "gas") {
+      Store.tudo[lista] = Store.tudo[lista].filter(function (x) { return x.id !== item.id; }).concat([obj]);
+      Store[lista] = Store.tudo[lista].filter(function (x) { return x.viagemId === Store.viagemId; });
+      render(); return Store.gas(lista === "gastos" ? "salvarGasto" : "salvarLugar", [obj]);
+    }
+    var d = Store.local(); var l = (d[lista][Store.viagemId] || []).filter(function (x) { return x.id !== item.id; }); l.push(obj);
+    d[lista][Store.viagemId] = l; Store.gravarLocal(d); Store[lista] = l; render(); return Promise.resolve();
+  },
+  _apagarItem: function (tipo, id) {
+    if (!Store.podeEditar()) return Promise.reject(SOMENTE_LEITURA);
+    var lista = tipo;
+    if (Store.modo === "db") return Store.col().doc(Store.viagemId).collection(lista).doc(id).delete();
+    if (Store.modo === "gas") {
+      Store.tudo[lista] = Store.tudo[lista].filter(function (x) { return x.id !== id; });
+      Store[lista] = Store.tudo[lista].filter(function (x) { return x.viagemId === Store.viagemId; });
+      render(); return Store.gas(lista === "gastos" ? "apagarGasto" : "apagarLugar", [id]);
+    }
+    var d = Store.local(); d[lista][Store.viagemId] = (d[lista][Store.viagemId] || []).filter(function (x) { return x.id !== id; });
+    Store.gravarLocal(d); Store[lista] = d[lista][Store.viagemId]; render(); return Promise.resolve();
+  },
+  salvarGasto: function (g) { return Store._salvarItem("gastos", g); },
+  apagarGasto: function (id) { return Store._apagarItem("gastos", id); },
+  salvarLugar: function (l) { return Store._salvarItem("lugares", l); },
+  apagarLugar: function (id) { return Store._apagarItem("lugares", id); },
+  /* Uma viagem com vários gastos de uma vez (usado pelo exemplo). */
+  salvarLote: function (v, gastos) {
+    if (Store.modo === "gas") {
+      var gs = gastos.map(function (g) { return Object.assign({}, g, { viagemId: v.id }); });
+      var vv = Object.assign({}, v, { tipo: "viagem" });
+      Store.viagens = Store.viagens.concat([vv]); Store.tudo.gastos = Store.tudo.gastos.concat(gs);
+      return Store.gas("salvarLote", [vv, gs]);
+    }
+    return Store.salvarViagem(v).then(function () {
+      Store.viagemId = v.id;
+      var seq = Promise.resolve();
+      gastos.forEach(function (g) { seq = seq.then(function () { return Store.salvarGasto(g); }); });
+      return seq;
+    });
+  }
+};
+
+/* ---------- Cálculos ---------- */
+function viagemAtual() { return normPag(Store.viagens.filter(function (v) { return v.id === Store.viagemId; })[0] || null); }
+/* escopo "tudo": o orçamento cobre passagens, hospedagem e gastos no destino.
+   escopo "destino": só os gastos no destino; passagens e hospedagem ficam à parte. */
+var FIXAS = ["transporte", "hospedagem"];
+/* O que o valor cobre: ida e volta (transporte até o destino) e hospedagem podem ficar dentro ou à parte.
+   Viagens antigas usam "escopo": "tudo" = as duas dentro; "destino" = as duas à parte. */
+function cobre(v) {
+  if (v && v.cobre) return { ida: v.cobre.ida !== false, hosp: v.cobre.hosp !== false };
+  return v && v.escopo === "destino" ? { ida: false, hosp: false } : { ida: true, hosp: true };
+}
+function foraOrc(v) { var c = cobre(v), f = []; if (!c.ida) f.push("transporte"); if (!c.hosp) f.push("hospedagem"); return f; }
+function fora(v, id) { return foraOrc(v).indexOf(id) >= 0; }
+function soDestino(v) { return foraOrc(v).length > 0; }
+function catsOrc(v) { return CATS.filter(function (c) { return !fora(v, c.id); }); }
+function pctPadrao(v, c) {
+  if (!soDestino(v)) return c.pct;
+  if (fora(v, c.id)) return 0;
+  var base = 0; CATS.forEach(function (x) { if (!fora(v, x.id)) base += x.pct; });
+  return c.pct * 100 / base;
+}
+/* Como vai até o destino: muda o nome e o ícone da categoria de ida e volta. */
+var VAI = {
+  aviao: { nome: "Avião", cat: "Passagens aéreas", ic: '<path d="M2 16l20-6-20-6 3 6-3 6zm3-6h9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>' },
+  onibus: { nome: "Ônibus", cat: "Passagens de ônibus", ic: '<rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5 11h14M8 18v3M16 18v3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="8.5" cy="14.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="14.5" r="1.2" fill="currentColor"/>' },
+  carro: { nome: "Carro próprio", cat: "Combustível e pedágio", ic: '<path d="M3 15l2-6a2 2 0 0 1 2-1.5h10a2 2 0 0 1 2 1.5l2 6v4H3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="7.5" cy="15.5" r="1.4" fill="currentColor"/><circle cx="16.5" cy="15.5" r="1.4" fill="currentColor"/>' },
+  alugado: { nome: "Carro alugado", cat: "Aluguel de carro e combustível", ic: '<path d="M3 15l2-6a2 2 0 0 1 2-1.5h10a2 2 0 0 1 2 1.5l2 6v4H3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M15 4.5h5M17.5 2v5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="7.5" cy="15.5" r="1.4" fill="currentColor"/><circle cx="16.5" cy="15.5" r="1.4" fill="currentColor"/>' },
+  outro: { nome: "Outro", cat: "Ida e volta", ic: '<path d="M4 12h16M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>' }
+};
+var IC_TRANSP = CATS[0].ic;
+function ajustarCats(v) {
+  var x = v && VAI[v.vai];
+  CAT.transporte.nome = x ? x.cat : "Passagens";
+  CAT.transporte.ic = x ? x.ic : IC_TRANSP;
+}
+function textoCobre(v) {
+  var c = cobre(v), x = VAI[v.vai], p = [];
+  if (c.ida) p.push((x ? x.cat : "passagens").toLowerCase());
+  if (c.hosp) p.push("hospedagem");
+  p.push("gastos no destino");
+  return p.join(" + ");
+}
+function textoFora(v) {
+  var x = VAI[v.vai], p = [];
+  if (fora(v, "transporte")) p.push(x ? x.cat : "Passagens");
+  if (fora(v, "hospedagem")) p.push(p.length ? "hospedagem" : "Hospedagem");
+  return p.join(" e ");
+}
+/* Escolha visual: como vai e o que entra no valor. estado = { vai, ida, hosp } */
+function coberturaUI(estado, aoMudar) {
+  var box = el("div", "cob");
+  box.appendChild(el("span", "lbl", "Como você vai até lá?"));
+  var gv = el("div", "vaigrid"); gv.setAttribute("role", "group"); gv.setAttribute("aria-label", "Como vai até o destino");
+  Object.keys(VAI).forEach(function (k) {
+    var b = el("button", "vchip"); b.type = "button"; b.setAttribute("aria-pressed", estado.vai === k ? "true" : "false");
+    b.appendChild(svgIc(VAI[k].ic, 22)); b.appendChild(el("span", null, VAI[k].nome));
+    b.onclick = function () { estado.vai = estado.vai === k ? "" : k; desenhar(); aoMudar(); };
+    gv.appendChild(b);
+  });
+  box.appendChild(gv);
+  box.appendChild(el("span", "lbl", "O que entra no valor que você tem?"));
+  var gc = el("div", "cobgrid"); box.appendChild(gc);
+  var res = el("p", "cobres"); box.appendChild(res);
+  box.appendChild(el("p", "hint", "Desmarque o que já foi pago à parte ou que você não vai ter, como hospedagem quando vai ficar na casa de alguém."));
+  function tile(chave, titulo, icone, cor, travado) {
+    var ligado = travado || estado[chave];
+    var b = el("button", "ctile" + (ligado ? " on" : "") + (travado ? " lock" : "")); b.type = "button";
+    b.setAttribute("aria-pressed", ligado ? "true" : "false"); if (travado) b.disabled = true;
+    var ic = el("span", "cic"); ic.style.background = cor; ic.appendChild(svgIc(icone, 18)); b.appendChild(ic);
+    var tx = el("span", "ctx"); tx.appendChild(el("b", null, titulo)); tx.appendChild(el("small", null, travado ? "Sempre incluído" : ligado ? "Incluído no valor" : "Fica à parte")); b.appendChild(tx);
+    b.appendChild(el("span", "ccheck", ligado ? "✓" : ""));
+    if (!travado) b.onclick = function () { estado[chave] = !estado[chave]; desenhar(); aoMudar(); };
+    return b;
+  }
+  function desenhar() {
+    Array.prototype.forEach.call(gv.children, function (b, i) { b.setAttribute("aria-pressed", Object.keys(VAI)[i] === estado.vai ? "true" : "false"); });
+    gc.textContent = "";
+    var x = VAI[estado.vai];
+    gc.appendChild(tile("ida", x ? x.cat : "Ida e volta", x ? x.ic : IC_TRANSP, catColor("transporte")));
+    gc.appendChild(tile("hosp", "Hospedagem", CAT.hospedagem.ic, catColor("hospedagem")));
+    gc.appendChild(tile("dest", "Gastos no destino", CAT.restaurante.ic, catColor("restaurante"), true));
+    var tmp = { vai: estado.vai, cobre: { ida: estado.ida, hosp: estado.hosp } };
+    res.textContent = ""; res.appendChild(el("span", null, "Seu valor cobre: ")); res.appendChild(el("b", null, textoCobre(tmp) + "."));
+  }
+  desenhar();
+  return box;
+}
+function modoOrc(v) { return v.orcModo || (v.orcCat ? "valor" : "auto"); }
+function orcCat(v) {
+  var m = modoOrc(v), o = {};
+  CATS.forEach(function (c) {
+    var fixa = fora(v, c.id);
+    if (fixa || m === "total") o[c.id] = 0;
+    else if (m === "valor" && v.orcCat && typeof v.orcCat[c.id] === "number") o[c.id] = v.orcCat[c.id];
+    else if (m === "pct" && v.orcPct && typeof v.orcPct[c.id] === "number") o[c.id] = Math.round((v.orcamento || 0) * v.orcPct[c.id]) / 100;
+    else o[c.id] = Math.round((v.orcamento || 0) * pctPadrao(v, c)) / 100;
+  });
+  return o;
+}
+function resumo(v) {
+  var dias = Math.max(1, difDias(v.ida, v.volta) + 1);
+  var h = hoje();
+  var passados = h < v.ida ? 0 : h > v.volta ? dias : difDias(v.ida, h) + 1;
+  var total = 0, antes = 0, durante = 0, forav = 0, porCat = {}, porDia = {};
+  CATS.forEach(function (c) { porCat[c.id] = 0; });
+  Store.gastos.forEach(function (g) {
+    var x = g.valorBRL || 0; porCat[g.categoria] = (porCat[g.categoria] || 0) + x;
+    if (fora(v, g.categoria)) { forav += x; return; }
+    total += x;
+    if (g.data < v.ida) antes += x; else if (g.data <= v.volta) { durante += x; porDia[g.data] = porDia[g.data] || {}; porDia[g.data][g.categoria] = (porDia[g.data][g.categoria] || 0) + x; } else durante += x;
+  });
+  var media = passados ? durante / passados : 0;
+  var restantes = dias - passados;
+  var projecao = passados ? total + media * restantes : null;
+  var orc = v.orcamento || 0;
+  var resta = orc - total;
+  var porDiaLivre = restantes > 0 ? resta / restantes : resta;
+  var fase = h < v.ida ? "antes" : h > v.volta ? "depois" : "durante";
+  return { dias: dias, passados: passados, restantes: restantes, total: total, antes: antes, durante: durante, porCat: porCat, porDia: porDia,
+    media: media, projecao: projecao, orc: orc, resta: resta, porDiaLivre: porDiaLivre, fase: fase, pct: orc ? total / orc : 0, fora: forav };
+}
+
+/* ---------- Render ---------- */
+var aba = "painel", filtroCat = "", confirmar = "";
+function render() {
+  var v = viagemAtual();
+  ajustarCats(v);
+  renderTopo(v);
+  var main = $("main"); main.textContent = "";
+  $("fab").hidden = !v || !Store.podeEditar() || Store.modo === "login";
+  if (Store.modo === "login") { $("tabs").hidden = true; $("novaViagem").hidden = true; $("contaBtn").hidden = true; renderLogin(main); return; }
+  $("contaBtn").hidden = false;
+  if (typeof GD !== "undefined" && GD.expirou) {
+    var ex = el("div", "alert warn"); ex.appendChild(el("span", null, "Sua sessão do Google expirou. Toque em Continuar para seguir de onde parou."));
+    var bx = el("button", "abtn", "Continuar"); bx.type = "button"; bx.onclick = renovarSessao; ex.appendChild(bx);
+    var wx = el("div", "alerts"); wx.appendChild(ex); main.appendChild(wx);
+  }
+  if (Store.modo === "erro") { var ce = el("div", "card empty"); ce.appendChild(el("h2", null, "Não consegui abrir seus dados")); ce.appendChild(el("p", "muted", Store.erro || "")); ce.appendChild(el("p", "hint", "Confira se você entrou com a conta Google certa e recarregue a página.")); main.appendChild(ce); return; }
+  if (Store.modo === "carregando" || Store.carregando) { main.appendChild(el("p", "hint", "Carregando suas viagens…")); return; }
+  if (Store.modo === "gas" && Store.nivel !== "dono") {
+    var fo = Store.fontes.filter(function (f) { return f.id === Store.fonte; })[0];
+    main.appendChild(el("div", "notice info", "Você está vendo " + (fo ? fo.nome.toLowerCase() : "dados compartilhados") + (Store.nivel === "ver" ? ", só para leitura." : ". O que você lançar entra na planilha dessa pessoa.")));
+  }
+  if (Store.modo === "local") {
+    main.appendChild(el("div", "notice info", "Os dados estão sendo guardados só neste navegador. Para guardar na sua conta e ver em outros aparelhos, abra a página pelo Claude com sua conta conectada."));
+  }
+  if (!v) { renderVazio(main); return; }
+  if (v.exemplo) {
+    var ne = el("div", "alert warn"); ne.appendChild(el("span", null, "Esta é uma viagem de exemplo, com gastos inventados para mostrar o painel."));
+    var bl = el("button", "abtn", "Limpar exemplos"); bl.type = "button"; bl.onclick = limparExemplos; ne.appendChild(bl);
+    var wr = el("div", "alerts"); wr.appendChild(ne); main.appendChild(wr);
+  }
+  if (aba === "painel") renderPainel(main, v);
+  else if (aba === "gastos") renderGastos(main, v);
+  else if (aba === "orcamento") renderOrcamento(main, v);
+  else renderDicas(main, v);
+  if (aba === "painel") main.appendChild(cardApoio());
+}
+
+function renderTopo(v) {
+  var fs = $("fonteSel"); fs.textContent = ""; fs.hidden = Store.fontes.length < 2;
+  Store.fontes.forEach(function (f) { var o = el("option", null, f.nome); o.value = f.id; if (f.id === Store.fonte) o.selected = true; fs.appendChild(o); });
+  $("novaViagem").hidden = !Store.podeEditar();
+  var sel = $("tripSel"); sel.textContent = "";
+  sel.hidden = Store.viagens.length < 2;
+  Store.viagens.forEach(function (x) { var o = el("option", null, x.nome || x.destino); o.value = x.id; if (x.id === Store.viagemId) o.selected = true; sel.appendChild(o); });
+  var hero = $("hero"); hero.textContent = "";
+  $("tabs").hidden = !v;
+  if (!v) { hero.appendChild(el("h1", null, "Sua viagem, do orçamento ao último gasto")); return; }
+  var r = resumo(v);
+  var a = el("div");
+  a.appendChild(el("h1", null, v.destino));
+  var meta = el("div", "meta");
+  function m(l, t) { var s = el("span"); s.appendChild(document.createTextNode(l + " ")); s.appendChild(el("b", null, t)); meta.appendChild(s); }
+  if (v.origem) m("Saindo de", v.origem);
+  m("Datas", fmtData(v.ida) + " a " + fmtData(v.volta) + " · " + r.dias + " dia(s)");
+  m("Orçamento", brl(r.orc));
+  a.appendChild(meta);
+  hero.appendChild(a);
+  var fase = r.fase === "antes" ? "Faltam " + difDias(hoje(), v.ida) + " dia(s)" : r.fase === "durante" ? "Dia " + r.passados + " de " + r.dias : "Viagem encerrada";
+  var lado = el("div", "heroside");
+  lado.appendChild(el("span", "pill" + (r.fase === "durante" ? " sun" : ""), fase));
+  if (Store.podeEditar()) {
+    var be = el("button", "ghost"); be.type = "button"; be.id = "editarViagem";
+    be.appendChild(svgIc('<path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>', 16));
+    be.appendChild(document.createTextNode(" Editar viagem")); be.onclick = function () { abrirViagem(v); };
+    lado.appendChild(be);
+  }
+  hero.appendChild(lado);
+}
+
+function renderVazio(main) {
+  var c = el("div", "card empty");
+  c.appendChild(svgIc('<path d="M2 16l20-6-20-6 3 6-3 6zm3-6h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>', 56));
+  c.appendChild(el("h2", null, "Comece sua primeira viagem"));
+  c.appendChild(el("p", "muted", "Diga para onde vai, as datas e quanto tem para gastar. O sistema divide o orçamento por categoria, e você lança cada gasto para acompanhar quanto resta."));
+  var row = el("div", "row"); row.style.justifyContent = "center";
+  var b1 = el("button", "btn cta", "Criar viagem"); b1.type = "button"; b1.onclick = function () { abrirViagem(null); };
+  var b2 = el("button", "btn", "Ver com uma viagem de exemplo"); b2.type = "button"; b2.onclick = criarExemplo;
+  row.appendChild(b1); row.appendChild(b2); c.appendChild(row);
+  main.appendChild(c);
+}
+
+function renderPainel(main, v) {
+  var r = resumo(v), oc = orcCat(v);
+  // Alertas com ação
+  var alertas = el("div", "alerts");
+  function alerta(cls, txt, rotulo, acao) {
+    var a = el("div", "alert " + cls); a.appendChild(svgIc(cls === "bad" ? '<path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5M12 18v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' : '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v6M12 16v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>', 20));
+    a.appendChild(el("span", null, txt));
+    if (rotulo) { var b = el("button", "abtn", rotulo); b.type = "button"; b.onclick = acao; a.appendChild(b); }
+    alertas.appendChild(a);
+  }
+  if (r.orc && r.resta < 0) alerta("bad", "Você passou " + brl(-r.resta) + " do orçamento.", "Adicionar ao orçamento", function () { abrirAporte(v, -r.resta); });
+  else if (r.orc && r.pct >= 0.9) alerta("warn", "Você já usou " + Math.round(r.pct * 100) + "% do orçamento.", "Adicionar ao orçamento", function () { abrirAporte(v, 0); });
+  var lim0 = v.orcPag || {}, din0 = 0; Store.gastos.forEach(function (g) { if (grupoDe(g) === "dinheiro") din0 += g.valorBRL || 0; });
+  if (lim0.dinheiro && din0 > lim0.dinheiro) alerta("bad", "O dinheiro levado acabou: passou " + brl(din0 - lim0.dinheiro) + ".", "Adicionar dinheiro", function () { abrirAporte(v, din0 - lim0.dinheiro, "dinheiro"); });
+  CATS.forEach(function (c) { var prev = oc[c.id] || 0, gasto = r.porCat[c.id] || 0; if (prev && gasto > prev && !fora(v, c.id)) alerta("warn", c.nome + " passou " + brl(gasto - prev) + " do previsto.", "Ajustar", function () { abrirAporte(v, gasto - prev, "", c.id); }); });
+  if (alertas.childNodes.length) main.appendChild(alertas);
+
+  // Destaque principal
+  var hero = el("section", "prem");
+  var esq = el("div", "prem-l");
+  esq.appendChild(el("span", "prem-k", r.resta < 0 ? "Passou do orçamento" : "Ainda pode gastar"));
+  esq.appendChild(el("div", "prem-v num", brl(Math.abs(r.resta))));
+  esq.appendChild(el("div", "prem-s num", "Gastou " + brl(r.total) + " de " + brl(r.orc) + " · " + Math.round(r.pct * 100) + "% usado"));
+  var stack = el("div", "stack"); stack.setAttribute("role", "img");
+  var base = Math.max(r.orc, r.total) || 1, partes = [];
+  CATS.forEach(function (c) { var x = fora(v, c.id) ? 0 : (r.porCat[c.id] || 0); if (!x) return; var s = el("i"); s.style.width = (x / base * 100) + "%"; s.style.background = catColor(c.id); s.title = c.nome + ": " + brl(x); stack.appendChild(s); partes.push(c.nome + " " + brl(x)); });
+  if (r.orc && r.total > r.orc) { var mk = el("b"); mk.style.left = (r.orc / base * 100) + "%"; mk.title = "Limite do orçamento"; stack.appendChild(mk); }
+  stack.setAttribute("aria-label", "Gasto por categoria: " + (partes.join(", ") || "nenhum gasto"));
+  esq.appendChild(stack);
+  var st;
+  if (r.resta < 0) st = el("span", "status bad", "Orçamento estourado");
+  else if (r.projecao !== null && r.projecao > r.orc) st = el("span", "status warn", "No ritmo atual, passa " + brl(r.projecao - r.orc));
+  else if (r.projecao !== null) st = el("span", "status good", "No ritmo atual, sobram " + brl(r.orc - r.projecao));
+  else st = el("span", "status good", r.fase === "antes" ? "A viagem ainda não começou" : "Dentro do orçamento");
+  esq.appendChild(st);
+  if (soDestino(v)) esq.appendChild(el("p", "prem-s num", textoFora(v) + ", fora deste orçamento: " + brl(r.fora) + " · custo total da viagem: " + brl(r.total + r.fora)));
+  hero.appendChild(esq);
+  var dir = el("div", "prem-r");
+  function tile(l, val, s, ruim) { var x = el("div", "ptile"); x.appendChild(el("span", "l", l)); x.appendChild(el("span", "v num" + (ruim ? " ruim" : ""), val)); if (s) x.appendChild(el("span", "s", s)); dir.appendChild(x); }
+  tile("Pode gastar por dia", r.fase === "depois" ? "—" : brl(Math.max(0, r.porDiaLivre)), r.fase === "depois" ? "viagem encerrada" : (r.fase === "antes" ? r.dias : r.restantes) + " dia(s) pela frente");
+  tile("Média por dia", r.passados ? brl(r.media) : "—", r.passados ? "durante a viagem" : "conta a partir do 1º dia");
+  tile("Projeção do total", r.projecao !== null ? brl(r.projecao) : brl(r.total), r.projecao !== null ? "se mantiver o ritmo" : "já pago antes: " + brl(r.antes), r.projecao !== null && r.projecao > r.orc);
+  tile("Gastos lançados", String(Store.gastos.length), "maior: " + (Store.gastos.length ? brl(Math.max.apply(null, Store.gastos.map(function (g) { return g.valorBRL || 0; }))) : "—"));
+  hero.appendChild(dir);
+  main.appendChild(hero);
+
+  var g2 = el("div", "grid g-two"); g2.style.marginTop = "16px";
+  // Categorias
+  var c2 = el("div", "card");
+  var h2 = el("h2", null, "Por categoria"); h2.appendChild(el("small", null, "gasto de previsto")); c2.appendChild(h2);
+  var cats = el("div", "cats");
+  catsOrc(v).slice().sort(function (a, b) { return (r.porCat[b.id] || 0) - (r.porCat[a.id] || 0); }).forEach(function (c) {
+    var gasto = r.porCat[c.id] || 0, prev = oc[c.id] || 0;
+    if (!gasto) return;
+    var row = el("div", "catrow");
+    row.appendChild(catIcon(c.id));
+    var mid = el("div");
+    var nm = el("div", "nm"); nm.appendChild(el("b", null, c.nome)); nm.appendChild(el("span", "num", prev ? Math.round(gasto / prev * 100) + "%" : r.total ? Math.round(gasto / r.total * 100) + "% do gasto" : ""));
+    mid.appendChild(nm);
+    var tr = el("div", "track"); var bar = el("i"); bar.style.width = Math.min(100, prev ? gasto / prev * 100 : r.total ? gasto / r.total * 100 : 0) + "%"; bar.style.background = gasto > prev && prev ? "var(--bad)" : catColor(c.id); tr.appendChild(bar);
+    mid.appendChild(tr);
+    row.appendChild(mid);
+    var val = el("div", "val" + (gasto > prev && prev ? " over" : ""), brl(gasto)); if (prev) val.appendChild(el("small", null, "de " + brl(prev)));
+    row.appendChild(val);
+    cats.appendChild(row);
+  });
+  if (!cats.children.length) cats.appendChild(el("p", "hint", "Nenhum gasto ainda. As categorias aparecem aqui conforme você lança os gastos. O previsto de cada uma fica na aba Orçamento."));
+  c2.appendChild(cats);
+  g2.appendChild(c2);
+
+  // Por dia
+  var c3 = el("div", "card");
+  var h3 = el("h2", null, "Gastos por dia"); h3.appendChild(el("small", null, r.antes ? "antes da viagem: " + brl(r.antes) : "durante a viagem")); c3.appendChild(h3);
+  c3.appendChild(graficoDias(v, r));
+  var leg = el("div", "legend");
+  var usadas = CATS.filter(function (c) { return Object.keys(r.porDia).some(function (d) { return r.porDia[d][c.id]; }); });
+  usadas.forEach(function (c) { var s = el("span"); var i = el("i"); i.style.background = catColor(c.id); s.appendChild(i); s.appendChild(document.createTextNode(c.nome)); leg.appendChild(s); });
+  var sl = el("span"); var il = el("i"); il.style.background = "var(--ink)"; il.style.height = "2px"; il.style.verticalAlign = "3px"; sl.appendChild(il); sl.appendChild(document.createTextNode("Média livre por dia")); leg.appendChild(sl);
+  c3.appendChild(leg);
+  g2.appendChild(c3);
+  main.appendChild(g2);
+
+  // Últimos
+  var g3 = el("div", "grid g-two"); g3.style.marginTop = "16px";
+  var porGrupo = {}, semPag = 0;
+  Store.gastos.forEach(function (g) { var k = grupoDe(g); if (k) porGrupo[k] = (porGrupo[k] || 0) + (g.valorBRL || 0); else semPag += g.valorBRL || 0; });
+  var lim = v.orcPag || {};
+  var cpg = el("div", "card");
+  var hpg = el("h2", null, "Por forma de pagamento"); if (Object.keys(lim).length) hpg.appendChild(el("small", null, "usado do limite")); cpg.appendChild(hpg);
+  var lpg = el("div", "cats");
+  GRUPOS.forEach(function (gr) {
+    var usado = porGrupo[gr.id] || 0, li = lim[gr.id] || 0;
+    if (!usado && !li) return;
+    var row = el("div", "catrow");
+    var ic = el("span", "cic"); ic.style.background = "var(--accent)"; ic.appendChild(svgIc(gr.ic, 18)); row.appendChild(ic);
+    var mid = el("div");
+    var nm = el("div", "nm"); nm.appendChild(el("b", null, gr.nome)); nm.appendChild(el("span", "num", li ? Math.round(usado / li * 100) + "%" : "sem limite")); mid.appendChild(nm);
+    if (li) { var tr = el("div", "track"); var bar = el("i"); bar.style.width = Math.min(100, usado / li * 100) + "%"; bar.style.background = usado > li ? "var(--bad)" : "var(--accent)"; tr.appendChild(bar); mid.appendChild(tr); }
+    if (li && gr.id === "dinheiro") mid.appendChild(el("div", "hint num", usado > li ? "Passou " + brl(usado - li) + " do dinheiro levado" : "Restam " + brl(li - usado) + " em dinheiro"));
+    if (li && gr.id === "credito") mid.appendChild(el("div", "hint num", usado > li ? "Passou " + brl(usado - li) + " do limite planejado" : "Restam " + brl(li - usado) + " no limite planejado"));
+    if (gr.id === "conta" && usado) {
+      var px = 0, db = 0; Store.gastos.forEach(function (g) { if (g.pagamento === "pix") px += g.valorBRL || 0; else if (g.pagamento === "debito") db += g.valorBRL || 0; });
+      mid.appendChild(el("div", "hint num", "Pix " + brl(px) + " · Débito " + brl(db)));
+    }
+    row.appendChild(mid);
+    var val = el("div", "val" + (li && usado > li ? " over" : ""), brl(usado)); if (li) val.appendChild(el("small", null, "de " + brl(li))); row.appendChild(val);
+    lpg.appendChild(row);
+  });
+  if (semPag) { var rn = el("div", "catrow"); var icn = el("span", "cic"); icn.style.background = "var(--c-outros)"; icn.appendChild(svgIc(CAT.outros.ic, 18)); rn.appendChild(icn); var mn = el("div"); mn.appendChild(el("div", "nm")).appendChild(el("b", null, "Não informado")); rn.appendChild(mn); rn.appendChild(el("div", "val", brl(semPag))); lpg.appendChild(rn); }
+  cpg.appendChild(lpg);
+  if (!lpg.childNodes.length) cpg.appendChild(el("p", "hint", "Ao lançar um gasto, escolha se pagou em dinheiro, crédito, débito ou Pix para ver o total de cada um aqui."));
+  if (!Object.keys(lim).length) { var hl = el("p", "hint", "Para controlar o dinheiro levado ou o limite do cartão, defina valores em Orçamento."); hl.style.marginTop = "10px"; cpg.appendChild(hl); }
+  g3.appendChild(cpg);
+  var c4 = el("div", "card");
+  var h4 = el("h2", null, "Últimos gastos");
+  if (Store.gastos.length && Store.podeEditar()) h4.appendChild(el("small", null, "toque para editar"));
+  var ver = el("button", "btn", "Ver todos"); ver.type = "button"; ver.style.minHeight = "36px"; ver.onclick = function () { trocarAba("gastos"); };
+  h4.appendChild(ver); c4.appendChild(h4);
+  var ult = Store.gastos.slice().sort(function (a, b) { return (b.data + (b.criadoEm || "")).localeCompare(a.data + (a.criadoEm || "")); }).slice(0, 6);
+  if (!ult.length) c4.appendChild(el("p", "hint", "Nenhum gasto ainda. Toque em \"Lançar gasto\" para registrar o primeiro."));
+  var list = el("div", "list"); ult.forEach(function (g) { list.appendChild(itemGasto(g, true)); }); c4.appendChild(list);
+  g3.appendChild(c4); main.appendChild(g3);
+}
+
+function graficoDias(v, r) {
+  var dias = []; for (var i = 0; i < r.dias && i < 45; i++) dias.push(addDias(v.ida, i));
+  var W = 640, H = 220, pl = 46, pr = 8, pt = 10, pb = 26;
+  var max = 0; dias.forEach(function (d) { var s = 0; var o = r.porDia[d] || {}; Object.keys(o).forEach(function (k) { s += o[k]; }); max = Math.max(max, s); });
+  var livre = 0; CATS.forEach(function (c) { if (c.id !== "transporte" && c.id !== "hospedagem") livre += orcCat(v)[c.id] || 0; }); livre = livre / r.dias;
+  max = Math.max(max, livre) * 1.15 || 100;
+  var passo = Math.pow(10, Math.floor(Math.log10(max))); var tick = [1, 2, 2.5, 5, 10].map(function (m) { return m * passo; }).filter(function (t) { return max / t <= 5; })[0] || passo * 10;
+  var y = function (val) { return pt + (H - pt - pb) * (1 - val / max); };
+  var bw = (W - pl - pr) / dias.length;
+  var s = '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Gastos por dia da viagem">';
+  for (var t = 0; t <= max; t += tick) s += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)" stroke-width="1"/><text x="' + (pl - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + (t >= 1000 ? (t / 1000).toLocaleString("pt-BR") + " mil" : Math.round(t)) + "</text>";
+  var h = hoje();
+  dias.forEach(function (d, i) {
+    var x = pl + i * bw + bw * 0.18, w = bw * 0.64, base = H - pb, o = r.porDia[d] || {};
+    CATS.forEach(function (c) { var val = o[c.id]; if (!val) return; var hh = (H - pt - pb) * val / max; base -= hh; s += '<rect x="' + x.toFixed(1) + '" y="' + base.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hh.toFixed(1) + '" fill="' + catColor(c.id) + '" rx="2"><title>' + c.nome + ": " + brl(val) + "</title></rect>"; });
+    if (dias.length <= 16 || i % Math.ceil(dias.length / 12) === 0) s += '<text x="' + (pl + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle"' + (d === h ? ' style="font-weight:700;fill:var(--ink)"' : "") + ">" + fmtData(d) + "</text>";
+  });
+  s += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y(livre) + '" y2="' + y(livre) + '" stroke="var(--ink)" stroke-width="1.6" stroke-dasharray="5 4"/>';
+  s += "</svg>";
+  var wrap = el("div"); wrap.innerHTML = s;
+  if (!Object.keys(r.porDia).length) wrap.appendChild(el("p", "hint", "As barras aparecem quando houver gastos com data dentro da viagem."));
+  return wrap;
+}
+
+function itemGasto(g, compacto) {
+  var it = el("div", "item"); it.tabIndex = 0; it.setAttribute("role", "button"); it.setAttribute("aria-label", "Editar " + (g.descricao || (CAT[g.categoria] || CAT.outros).nome));
+  it.appendChild(catIcon(g.categoria in CAT ? g.categoria : "outros"));
+  var mid = el("div"); mid.style.minWidth = "0";
+  mid.appendChild(el("div", "t", g.descricao || g.local || (CAT[g.categoria] || CAT.outros).nome));
+  var sub = [(CAT[g.categoria] || CAT.outros).nome];
+  if (g.local && g.descricao) sub.push(g.local);
+  if (g.pagamento && PAGM[g.pagamento]) sub.push(PAGM[g.pagamento].nome);
+  if (compacto) sub.push(fmtData(g.data));
+  mid.appendChild(el("div", "d", sub.join(" · ")));
+  it.appendChild(mid);
+  var v = el("div", "v num", brl2(g.valorBRL || 0));
+  if (g.moeda && g.moeda !== "BRL") v.appendChild(el("small", null, moedaFmt(g.valor, g.moeda)));
+  it.appendChild(v);
+  var ed = el("span", "edit"); ed.appendChild(svgIc('<path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>', 18)); ed.setAttribute("aria-hidden", "true");
+  it.appendChild(ed);
+  var abrir = function () { abrirGasto(g); };
+  it.onclick = abrir; it.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); } };
+  return it;
+}
+var filtro = { periodo: "tudo", de: "", ate: "", cat: "", pag: "", q: "", agrupar: "dia" };
+function filtrarGastos(v) {
+  var q = filtro.q.trim().toLowerCase();
+  return Store.gastos.filter(function (g) {
+    if (filtro.cat && g.categoria !== filtro.cat) return false;
+    if (filtro.pag && (g.pagamento || "nao") !== filtro.pag) return false;
+    if (filtro.periodo === "antes" && g.data >= v.ida) return false;
+    if (filtro.periodo === "durante" && (g.data < v.ida || g.data > v.volta)) return false;
+    if (filtro.periodo === "datas" && filtro.de && (g.data < filtro.de || g.data > (filtro.ate || filtro.de))) return false;
+    if (q && ((g.descricao || "") + " " + (g.local || "")).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  }).sort(function (a, b) { return (b.data + (b.criadoEm || "")).localeCompare(a.data + (a.criadoEm || "")); });
+}
+function textoFiltros(v) {
+  var t = [];
+  t.push({ tudo: "toda a viagem", antes: "antes da viagem", durante: "durante a viagem", datas: filtro.de ? fmtData(filtro.de) + " a " + fmtData(filtro.ate || filtro.de) : "datas" }[filtro.periodo]);
+  if (filtro.cat) t.push(CAT[filtro.cat].nome);
+  if (filtro.pag) t.push(filtro.pag === "nao" ? "pagamento não informado" : PAGM[filtro.pag].nome);
+  if (filtro.q) t.push('busca "' + filtro.q + '"');
+  return t.join(", ");
+}
+var filtrosAbertos = null;
+function renderGastos(main, v) {
+  var c = el("div", "card");
+  var h = el("h2", null, "Gastos e relatório"); c.appendChild(h);
+  var busca = document.createElement("input"); busca.type = "search"; busca.className = "search"; busca.placeholder = "Buscar por descrição ou local"; busca.value = filtro.q; busca.setAttribute("aria-label", "Buscar gastos");
+  c.appendChild(busca);
+  function chips(lista, chave, rot) {
+    var f = el("div", "filters"); f.setAttribute("role", "group"); f.setAttribute("aria-label", rot);
+    lista.forEach(function (o) {
+      var b = el("button", "fchip"); b.type = "button"; b.setAttribute("aria-pressed", filtro[chave] === o.id ? "true" : "false");
+      if (o.cor) { var i = el("i"); i.style.background = o.cor; b.appendChild(i); }
+      b.appendChild(document.createTextNode(o.nome));
+      b.onclick = function () { filtro[chave] = o.id; if (chave === "periodo" && o.id === "datas" && !filtro.de) { filtro.de = v.ida; filtro.ate = v.volta; } render(); };
+      f.appendChild(b);
+    });
+    return f;
+  }
+  var nAtivos = (filtro.periodo !== "tudo" ? 1 : 0) + (filtro.cat ? 1 : 0) + (filtro.pag ? 1 : 0) + (filtro.agrupar === "categoria" ? 1 : 0);
+  var aberto = filtrosAbertos === null ? window.innerWidth > 640 : filtrosAbertos;
+  var tg = el("button", "togrow ftog"); tg.type = "button"; tg.setAttribute("aria-expanded", aberto ? "true" : "false");
+  var tt = el("span", "ftt"); tt.appendChild(el("b", null, "Filtros" + (nAtivos ? " (" + nAtivos + ")" : ""))); tt.appendChild(el("small", null, textoFiltros(v) + (filtro.agrupar === "categoria" ? " · por categoria" : " · por dia"))); tg.appendChild(tt);
+  tg.appendChild(el("i", null, "›"));
+  tg.onclick = function () { filtrosAbertos = !aberto; render(); };
+  c.appendChild(tg);
+  var fp = el("div", "fpanel"); fp.hidden = !aberto; c.appendChild(fp);
+  fp.appendChild(el("span", "lbl flab", "Período"));
+  fp.appendChild(chips([{ id: "tudo", nome: "Toda a viagem" }, { id: "antes", nome: "Antes da viagem" }, { id: "durante", nome: "Durante" }, { id: "datas", nome: "Escolher datas" }], "periodo", "Período"));
+  if (filtro.periodo === "datas") {
+    var info = el("p", "hint", filtro.de ? "De " + dataLonga(filtro.de) + " até " + dataLonga(filtro.ate || filtro.de) + ". Toque no primeiro e no último dia." : "Toque no primeiro e no último dia.");
+    var cal = calendario({ de: filtro.de, ate: filtro.ate, faixaViagem: [v.ida, v.volta], onPick: function (d) {
+      if (!filtro.de || (filtro.de && filtro.ate)) { filtro.de = d; filtro.ate = ""; } else if (d < filtro.de) { filtro.ate = filtro.de; filtro.de = d; } else filtro.ate = d;
+      render();
+    } });
+    var cw = el("div", "calwrap"); cw.appendChild(info); cw.appendChild(cal); fp.appendChild(cw);
+  }
+  fp.appendChild(el("span", "lbl flab", "Categoria"));
+  fp.appendChild(chips([{ id: "", nome: "Todas" }].concat(CATS.map(function (x) { return { id: x.id, nome: x.nome, cor: catColor(x.id) }; })), "cat", "Categoria"));
+  fp.appendChild(el("span", "lbl flab", "Pagamento"));
+  fp.appendChild(chips([{ id: "", nome: "Todos" }].concat(PAG).concat([{ id: "nao", nome: "Não informado" }]), "pag", "Forma de pagamento"));
+  fp.appendChild(el("span", "lbl flab", "Organizar por"));
+  fp.appendChild(chips([{ id: "dia", nome: "Dia" }, { id: "categoria", nome: "Categoria" }], "agrupar", "Organizar por"));
+  if (nAtivos) { var lp = el("button", "linkbtn", "Limpar filtros"); lp.type = "button"; lp.onclick = function () { filtro.periodo = "tudo"; filtro.cat = ""; filtro.pag = ""; filtro.agrupar = "dia"; filtro.de = ""; filtro.ate = ""; render(); }; fp.appendChild(lp); }
+  main.appendChild(c);
+
+  var res = el("div", "card"); res.style.marginTop = "16px";
+  main.appendChild(res);
+  function lista() {
+    res.textContent = "";
+    var gs = filtrarGastos(v), r = resumoDe(v, gs);
+    var top = el("div", "reptop");
+    var tt = el("div"); tt.appendChild(el("div", "muted", gs.length + " gasto(s) · " + textoFiltros(v))); tt.appendChild(el("div", "big num", brl2(r.total)));
+    top.appendChild(tt);
+    var ex = el("div", "row");
+    var bx = el("button", "btn", "Baixar Excel"); bx.type = "button"; bx.disabled = !gs.length; bx.onclick = function () { exportarExcel(v, ordenarExport(gs, filtro.agrupar), filtro.agrupar); };
+    var bp = el("button", "btn solid", "Baixar PDF"); bp.type = "button"; bp.disabled = !gs.length; bp.onclick = function () { exportarPDF(v, ordenarExport(gs, filtro.agrupar), textoFiltros(v), filtro.agrupar); };
+    ex.appendChild(bx); ex.appendChild(bp); top.appendChild(ex);
+    res.appendChild(top);
+    var pagres = el("div", "paysum");
+    PAG.forEach(function (p) { if (!r.pag[p.id]) return; var s = el("span"); s.appendChild(svgIc(p.ic, 16)); s.appendChild(document.createTextNode(p.nome + " " + brl2(r.pag[p.id]))); pagres.appendChild(s); });
+    if (pagres.childNodes.length) res.appendChild(pagres);
+    if (!gs.length) { res.appendChild(el("p", "hint", Store.gastos.length ? "Nenhum gasto com esses filtros." : "Nenhum gasto ainda. Toque em \"Lançar gasto\".")); return; }
+    res.appendChild(el("p", "hint", "Toque em um gasto para editar ou apagar."));
+    if (filtro.agrupar === "categoria") {
+      ordenarExport(gs, "categoria").forEach(function (g, i, arr) {
+        if (i === 0 || arr[i - 1].categoria !== g.categoria) {
+          var soma = r.cat[g.categoria] || 0, qtd = arr.filter(function (x) { return x.categoria === g.categoria; }).length;
+          var gh = el("div", "grouphead"); gh.appendChild(catIcon(g.categoria));
+          var nm = el("div"); nm.appendChild(el("b", null, (CAT[g.categoria] || CAT.outros).nome)); nm.appendChild(el("div", "hint num", qtd + " gasto(s) · " + Math.round(soma / r.total * 100) + "% do total")); gh.appendChild(nm);
+          gh.appendChild(el("div", "gv num", brl2(soma)));
+          res.appendChild(gh); res.appendChild(el("div", "list"));
+        }
+        res.lastChild.appendChild(itemGasto(g, true));
+      });
+      return;
+    }
+    var dia = "", l = null;
+    gs.forEach(function (g) {
+      if (g.data !== dia) {
+        dia = g.data;
+        var soma = gs.filter(function (x) { return x.data === dia; }).reduce(function (s, x) { return s + (x.valorBRL || 0); }, 0);
+        var dh = el("div", "dayhead"); dh.appendChild(el("span", null, diaSemana(dia) + (dia < v.ida ? " · antes da viagem" : ""))); dh.appendChild(el("span", "num", brl2(soma)));
+        res.appendChild(dh); l = el("div", "list"); res.appendChild(l);
+      }
+      l.appendChild(itemGasto(g, false));
+    });
+  }
+  busca.addEventListener("input", function () { filtro.q = busca.value; lista(); });
+  lista();
+}
+var escopoTemp = null, modoTemp = null;
+function renderOrcamento(main, vSalva) {
+  var v = Object.assign({}, vSalva);
+  if (escopoTemp) {
+    var c0 = cobre(vSalva); v.vai = escopoTemp.vai; v.cobre = { ida: escopoTemp.ida, hosp: escopoTemp.hosp };
+    if (c0.ida !== escopoTemp.ida || c0.hosp !== escopoTemp.hosp) { delete v.orcCat; delete v.orcPct; }
+  }
+  ajustarCats(v);
+  if (modoTemp) v.orcModo = modoTemp;
+  var modo = modoOrc(v);
+  var oc = orcCat(v), r = resumo(v);
+  var c = el("div", "card");
+  c.appendChild(el("h2", null, "Quanto tenho para gastar"));
+  var fT = el("div", "f"); var lT = el("label", null, "Tenho para gastar (R$)"); lT.htmlFor = "orcTotal"; fT.appendChild(lT);
+  var iT = campoMoeda(document.createElement("input"), v.orcamento || 0); iT.id = "orcTotal"; iT.classList.add("money-sm"); fT.appendChild(iT);
+  c.appendChild(fT);
+  var cv = cobre(v);
+  var estCob = { vai: v.vai || "", ida: cv.ida, hosp: cv.hosp };
+  c.appendChild(coberturaUI(estCob, function () { guardarTotal(); escopoTemp = { vai: estCob.vai, ida: estCob.ida, hosp: estCob.hosp }; render(); }));
+  var totalDigitado = null;
+  function guardarTotal() { totalDigitado = valorDe(iT); vSalva._totalTemp = totalDigitado; }
+  if (typeof vSalva._totalTemp === "number") iT.value = fmtMoeda(vSalva._totalTemp);
+
+  c.appendChild(el("span", "lbl flab", "Como dividir por categoria"));
+  var seg = el("div", "seg4"); seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Como dividir");
+  [["total", "Não dividir"], ["auto", "Automático"], ["pct", "Eu defino em %"], ["valor", "Eu defino em R$"]].forEach(function (o) {
+    var b = el("button", null, o[1]); b.type = "button"; b.setAttribute("aria-pressed", modo === o[0] ? "true" : "false");
+    b.onclick = function () { guardarTotal(); modoTemp = o[0]; render(); };
+    seg.appendChild(b);
+  });
+  c.appendChild(seg);
+  var expl = { total: "Só o valor total. O painel mostra quanto foi para cada categoria, sem previsão por categoria.",
+    auto: "O sistema divide: " + catsOrc(v).map(function (cat) { return cat.nome.toLowerCase() + " " + (Math.round(pctPadrao(v, cat) * 10) / 10).toLocaleString("pt-BR") + "%"; }).join(", ") + ".",
+    pct: "Digite a porcentagem de cada categoria. A soma deve dar 100%.", valor: "Digite quanto quer gastar em cada categoria." }[modo];
+  c.appendChild(el("p", "hint", expl));
+
+  var lista = el("div"); lista.style.marginTop = "10px";
+  var inputs = {};
+  if (modo !== "total") {
+    catsOrc(v).forEach(function (cat) {
+      var row = el("div", "budrow");
+      row.appendChild(catIcon(cat.id));
+      var nm = el("div"); nm.appendChild(el("b", null, cat.nome)); nm.appendChild(el("div", "hint num", "gasto: " + brl(r.porCat[cat.id] || 0))); row.appendChild(nm);
+      var inp;
+      if (modo === "valor") { inp = campoMoeda(document.createElement("input"), oc[cat.id]); }
+      else if (modo === "pct") { inp = document.createElement("input"); inp.type = "number"; inp.min = "0"; inp.max = "100"; inp.step = "0.5"; inp.inputMode = "decimal";
+        inp.value = v.orcPct && typeof v.orcPct[cat.id] === "number" ? v.orcPct[cat.id] : Math.round(pctPadrao(v, cat) * 10) / 10; }
+      else { inp = el("span", "autov num"); }
+      inp.setAttribute && inp.setAttribute("aria-label", "Previsto para " + cat.nome);
+      row.appendChild(inp); inputs[cat.id] = inp;
+      row.appendChild(el("span", "pc"));
+      lista.appendChild(row);
+    });
+  }
+  c.appendChild(lista);
+  var sb = el("div", "sumbar"); if (modo !== "total") c.appendChild(sb);
+  function atualizar() {
+    var tot = valorDe(iT), soma = 0, somaPct = 0;
+    catsOrc(v).forEach(function (cat) {
+      var inp = inputs[cat.id]; if (!inp) return;
+      var pcEl = inp.parentNode.querySelector(".pc");
+      if (modo === "valor") { var x = valorDe(inp); soma += x; pcEl.textContent = tot ? Math.round(x / tot * 100) + "%" : ""; }
+      else if (modo === "pct") { var p = n0(inp.value, 0); somaPct += p; pcEl.textContent = brl(tot * p / 100); }
+      else { var a = Math.round(tot * pctPadrao(v, cat) / 100); inp.textContent = brl(a); pcEl.textContent = Math.round(pctPadrao(v, cat)) + "%"; }
+    });
+    sb.textContent = "";
+    if (modo === "valor") {
+      sb.appendChild(el("span", null, "Soma das categorias: " + brl(soma)));
+      var dif = Math.round((tot - soma) * 100) / 100;
+      sb.appendChild(el("span", dif < 0 ? "over" : "muted", Math.abs(dif) < 1 ? "Bate com o total" : dif > 0 ? "Sobram " + brl(dif) + " sem categoria" : "Passa " + brl(-dif) + " do total"));
+    } else if (modo === "pct") {
+      sb.appendChild(el("span", null, "Soma: " + (Math.round(somaPct * 10) / 10).toLocaleString("pt-BR") + "%"));
+      sb.appendChild(el("span", Math.abs(somaPct - 100) < 0.05 ? "muted" : "over", Math.abs(somaPct - 100) < 0.05 ? "Fecha 100%" : somaPct < 100 ? "Faltam " + (Math.round((100 - somaPct) * 10) / 10).toLocaleString("pt-BR") + "%" : "Passa de 100%"));
+    } else sb.appendChild(el("span", "muted", "Divisão automática pelo padrão"));
+  }
+  lista.addEventListener("input", atualizar); iT.addEventListener("input", atualizar);
+  atualizar();
+  main.appendChild(c);
+
+  // Por forma de pagamento
+  var cp = el("div", "card"); cp.style.marginTop = "16px";
+  var hp = el("h2", null, "Por forma de pagamento"); hp.appendChild(el("small", null, "opcional")); cp.appendChild(hp);
+  cp.appendChild(el("p", "hint", "Diga quanto vai levar em dinheiro, o limite para o cartão de crédito e quanto vai sair da conta (Pix e débito). Deixe em branco o que não quiser controlar."));
+  var pagIn = {}, op = v.orcPag || {}, porGrupo = {};
+  Store.gastos.forEach(function (g) { var k = grupoDe(g); if (k) porGrupo[k] = (porGrupo[k] || 0) + (g.valorBRL || 0); });
+  var lp = el("div"); lp.style.marginTop = "8px";
+  GRUPOS.forEach(function (gr) {
+    var row = el("div", "budrow");
+    var ic = el("span", "cic"); ic.style.background = "var(--accent)"; ic.appendChild(svgIc(gr.ic, 18)); row.appendChild(ic);
+    var nm = el("div"); nm.appendChild(el("b", null, gr.nome)); nm.appendChild(el("div", "hint num", "usado: " + brl(porGrupo[gr.id] || 0))); row.appendChild(nm);
+    var inp = campoMoeda(document.createElement("input"), op[gr.id] || 0); inp.placeholder = "sem limite"; inp.setAttribute("aria-label", "Limite para " + gr.nome);
+    row.appendChild(inp); pagIn[gr.id] = inp; row.appendChild(el("span", "pc"));
+    lp.appendChild(row);
+  });
+  cp.appendChild(lp);
+  main.appendChild(cp);
+
+  var row = el("div", "row"); row.style.marginTop = "16px";
+  var salvar = el("button", "btn cta", "Salvar orçamento"); salvar.type = "button";
+  var mais = el("button", "btn", "+ Adicionar dinheiro ao orçamento"); mais.type = "button"; mais.onclick = function () { abrirAporte(vSalva, 0); };
+  salvar.onclick = function () {
+    var nv = Object.assign({}, vSalva); delete nv._totalTemp;
+    nv.vai = v.vai || ""; nv.cobre = cobre(v); nv.escopo = nv.cobre.ida && nv.cobre.hosp ? "tudo" : "destino"; nv.orcModo = modo; nv.orcamento = valorDe(iT); nv.orcPag = {};
+    if (modo === "valor") { nv.orcCat = {}; CATS.forEach(function (cat) { nv.orcCat[cat.id] = inputs[cat.id] ? valorDe(inputs[cat.id]) : 0; }); }
+    if (modo === "pct") {
+      var s = 0; nv.orcPct = {}; CATS.forEach(function (cat) { var p = inputs[cat.id] ? n0(inputs[cat.id].value, 0) : 0; nv.orcPct[cat.id] = p; s += p; });
+      if (Math.abs(s - 100) >= 0.05 && !confirmouPct) { confirmouPct = true; toast("As porcentagens somam " + (Math.round(s * 10) / 10).toLocaleString("pt-BR") + "%. Toque em salvar de novo para manter."); return; }
+    }
+    confirmouPct = false;
+    GRUPOS.forEach(function (gr) { var x = valorDe(pagIn[gr.id]); if (x > 0) nv.orcPag[gr.id] = x; });
+    salvar.disabled = true;
+    Store.salvarViagem(nv).then(function () { escopoTemp = null; modoTemp = null; delete vSalva._totalTemp; toast("Orçamento salvo"); }).catch(erroSalvar).then(function () { salvar.disabled = false; });
+  };
+  row.appendChild(salvar); row.appendChild(mais); main.appendChild(row);
+
+  if (v.aportes && v.aportes.length) {
+    var ca = el("div", "card"); ca.style.marginTop = "16px";
+    var tot = v.aportes.reduce(function (s, a) { return s + a.valor; }, 0);
+    var ha = el("h2", null, "Dinheiro adicionado durante a viagem"); ha.appendChild(el("small", "num", brl(tot))); ca.appendChild(ha);
+    var la = el("div", "list");
+    v.aportes.slice().reverse().forEach(function (a) {
+      var it = el("div", "item"); it.style.cursor = "default"; it.style.gridTemplateColumns = "38px minmax(0, 1fr) auto";
+      var ic = el("span", "cic"); ic.style.background = "var(--good)"; ic.appendChild(svgIc('<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>', 16)); it.appendChild(ic);
+      var m = el("div"); m.appendChild(el("div", "t", a.nota || "Reforço do orçamento"));
+      m.appendChild(el("div", "d", fmtData(a.data) + (a.categoria ? " · " + CAT[a.categoria].nome : "") + (a.grupo ? " · limite de " + grupoNome(a.grupo).toLowerCase() : ""))); it.appendChild(m);
+      it.appendChild(el("div", "v num", "+ " + brl2(a.valor)));
+      la.appendChild(it);
+    });
+    ca.appendChild(la); main.appendChild(ca);
+  }
+
+  var c2 = el("div", "card"); c2.style.marginTop = "16px";
+  c2.appendChild(el("h2", null, "Dados da viagem"));
+  var r2 = el("div", "row");
+  var ed = el("button", "btn", "Editar destino e datas"); ed.type = "button"; ed.onclick = function () { abrirViagem(vSalva); }; r2.appendChild(ed);
+  var del = el("button", "btn danger" + (confirmar === "viagem" ? " solid" : ""), confirmar === "viagem" ? "Confirmar: apagar viagem e gastos" : "Apagar viagem"); del.type = "button";
+  del.onclick = function () {
+    if (confirmar !== "viagem") { confirmar = "viagem"; render(); return; }
+    confirmar = ""; del.disabled = true;
+    Store.apagarViagem(vSalva.id).then(function () { toast("Viagem apagada"); aba = "painel"; }).catch(erroSalvar);
+  };
+  r2.appendChild(del);
+  c2.appendChild(r2);
+  main.appendChild(c2);
+}
+var confirmouPct = false;
+/* ---------- Dicas do destino: links de exploração e Meus lugares (IA só opcional) ---------- */
+var gerandoDicas = false, erroDicas = "", filtroLugar = "";
+var TIPOS_LUGAR = [
+  { id: "visitar", nome: "Para visitar", ic: '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="9.5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/>' },
+  { id: "comer", nome: "Para comer", ic: CATS[2].ic },
+  { id: "outro", nome: "Outro", ic: CATS[7].ic }
+];
+var TIPOL = {}; TIPOS_LUGAR.forEach(function (t) { TIPOL[t.id] = t; });
+function mapa(t, dest) { return "https://www.google.com/maps/search/" + encodeURIComponent(t + (dest ? " " + dest : "")); }
+function destinoBusca(v) { return v.destino.replace(/\s*\(exemplo\)\s*/i, ""); }
+
+function renderDicas(main, v) {
+  var dest = destinoBusca(v);
+  var c = el("div", "card");
+  var h = el("h2", null, "Explorar " + dest); h.appendChild(el("small", null, "abre no Google Maps")); c.appendChild(h);
+  var g = el("div", "explore");
+  [["O que fazer", "o que fazer em", TIPOL.visitar.ic], ["Onde comer", "restaurantes em", CATS[2].ic], ["Cafés e padarias", "cafés em", CATS[3].ic],
+   ["Pontos turísticos", "pontos turísticos em", CATS[4].ic], ["Mercados", "supermercado em", CATS[3].ic], ["Farmácias", "farmácia em", CATS[7].ic]].forEach(function (x) {
+    var a = el("a", "exp"); a.href = mapa(x[1] + " " + dest); a.target = "_blank"; a.rel = "noopener noreferrer";
+    var ic = el("span", "cic"); ic.style.background = "var(--accent)"; ic.appendChild(svgIc(x[2], 18)); a.appendChild(ic);
+    a.appendChild(el("b", null, x[0])); a.appendChild(el("span", "hint", "↗")); g.appendChild(a);
+  });
+  c.appendChild(g);
+  main.appendChild(c);
+  var par = cardParceiros(); if (par) main.appendChild(par);
+
+  // Meus lugares
+  var cl = el("div", "card"); cl.style.marginTop = "16px";
+  var hl = el("h2", null, "Meus lugares");
+  if (Store.podeEditar()) { var add = el("button", "btn", "+ Adicionar lugar"); add.type = "button"; add.style.minHeight = "38px"; add.onclick = function () { abrirLugar(null); }; hl.appendChild(add); }
+  cl.appendChild(hl);
+  cl.appendChild(el("p", "hint", "Sua lista de lugares para visitar e comer. Quando você lança um gasto com \"Onde foi\", o lugar entra aqui como visitado."));
+  var f = el("div", "filters"); f.style.marginTop = "10px";
+  [{ id: "", nome: "Todos" }, { id: "visitar", nome: "Para visitar" }, { id: "comer", nome: "Para comer" }, { id: "quero", nome: "Quero ir" }, { id: "fui", nome: "Já fui" }].forEach(function (o) {
+    var b = el("button", "fchip", o.nome); b.type = "button"; b.setAttribute("aria-pressed", filtroLugar === o.id ? "true" : "false");
+    b.onclick = function () { filtroLugar = o.id; render(); }; f.appendChild(b);
+  });
+  cl.appendChild(f);
+  var ls = Store.lugares.filter(function (l) {
+    if (!filtroLugar) return true;
+    if (filtroLugar === "quero" || filtroLugar === "fui") return l.status === filtroLugar;
+    return l.tipo === filtroLugar;
+  }).sort(function (a, b) { return (a.status === "quero" ? 0 : 1) - (b.status === "quero" ? 0 : 1) || (a.nome || "").localeCompare(b.nome || ""); });
+  if (!ls.length) cl.appendChild(el("p", "hint", Store.lugares.length ? "Nenhum lugar com esse filtro." : "Nenhum lugar ainda."));
+  var gl = el("div", "places");
+  ls.forEach(function (l) {
+    var t = el("div", "place");
+    var top = el("div", "ptop");
+    var ic = el("span", "cic"); ic.style.background = l.tipo === "comer" ? catColor("restaurante") : l.tipo === "visitar" ? catColor("passeios") : catColor("outros"); ic.appendChild(svgIc((TIPOL[l.tipo] || TIPOL.outro).ic, 16)); top.appendChild(ic);
+    var nm = el("div"); nm.appendChild(el("b", null, l.nome));
+    var meta = [(TIPOL[l.tipo] || TIPOL.outro).nome]; if (l.faixa) meta.push(l.faixa); if (l.endereco) meta.push(l.endereco);
+    nm.appendChild(el("span", "hint", meta.join(" · "))); top.appendChild(nm);
+    var st = el("button", "stbtn" + (l.status === "fui" ? " fui" : ""), l.status === "fui" ? "Já fui" : "Quero ir"); st.type = "button";
+    st.setAttribute("aria-label", "Marcar como " + (l.status === "fui" ? "quero ir" : "já fui"));
+    st.onclick = function () { var n = Object.assign({}, l, { status: l.status === "fui" ? "quero" : "fui" }); Store.salvarLugar(n).catch(erroSalvar); };
+    if (!Store.podeEditar()) st.disabled = true;
+    top.appendChild(st);
+    t.appendChild(top);
+    if (l.nota) t.appendChild(el("p", "hint", l.nota));
+    var gastoAqui = Store.gastos.filter(function (g) { return g.local && norm(g.local) === norm(l.nome); }).reduce(function (s, g) { return s + (g.valorBRL || 0); }, 0);
+    var rodape = el("div", "pfoot");
+    var a = el("a", null, "Ver no mapa ↗"); a.href = mapa(l.nome + (l.endereco ? " " + l.endereco : ""), dest); a.target = "_blank"; a.rel = "noopener noreferrer"; rodape.appendChild(a);
+    if (gastoAqui) rodape.appendChild(el("span", "hint num", "gasto aqui: " + brl2(gastoAqui)));
+    if (Store.podeEditar()) { var ed = el("button", "linkbtn", "Editar"); ed.type = "button"; ed.onclick = function () { abrirLugar(l); }; rodape.appendChild(ed); }
+    t.appendChild(rodape);
+    gl.appendChild(t);
+  });
+  cl.appendChild(gl);
+  main.appendChild(cl);
+
+  // IA opcional: só aparece onde há o Claude por trás da página
+  if (!GAS && window.claude && window.claude.use) {
+    var ci = el("div", "card"); ci.style.marginTop = "16px";
+    var hi = el("h2", null, "Sugestões com IA"); hi.appendChild(el("small", null, "opcional")); ci.appendChild(hi);
+    var d = v.dicas;
+    if (!d) {
+      ci.appendChild(el("p", "hint", "Se quiser, o Claude sugere passeios, comidas típicas e dicas de economia. Usa o seu plano do Claude e fica guardado nesta viagem."));
+      var b = el("button", "btn", gerandoDicas ? "Gerando…" : "Gerar sugestões"); b.type = "button"; b.disabled = gerandoDicas; b.onclick = function () { gerarDicas(v); }; b.style.marginTop = "10px";
+      ci.appendChild(b);
+      if (erroDicas) { var e = el("p", "notice", erroDicas); e.style.marginTop = "12px"; ci.appendChild(e); }
+    } else {
+      if (d.resumo) ci.appendChild(el("p", null, d.resumo));
+      var tips = el("div", "tips"); tips.style.marginTop = "10px";
+      (d.onde_ir || []).concat((d.onde_comer || []).map(function (x) { return { nome: x.lugar, porque: x.o_que_pedir, custo: x.faixa, comer: true }; })).forEach(function (x) {
+        var t = el("div", "tip"); t.appendChild(el("b", null, x.nome)); if (x.porque) t.appendChild(el("span", null, x.porque)); if (x.custo) t.appendChild(el("span", null, x.custo));
+        var r = el("div", "row");
+        var a = el("a", null, "Mapa ↗"); a.href = mapa(x.nome, dest); a.target = "_blank"; a.rel = "noopener noreferrer"; r.appendChild(a);
+        var sv = el("button", "linkbtn", "Salvar em Meus lugares"); sv.type = "button";
+        sv.onclick = function () { Store.salvarLugar({ id: novoId("l_"), nome: x.nome, tipo: x.comer ? "comer" : "visitar", status: "quero", faixa: "", endereco: "", nota: x.porque || "", criadoEm: new Date().toISOString() }).then(function () { toast("Salvo em Meus lugares"); }).catch(erroSalvar); };
+        r.appendChild(sv); t.appendChild(r); tips.appendChild(t);
+      });
+      ci.appendChild(tips);
+      ci.appendChild(el("p", "hint", "Sugestões geradas por IA. Confira horários, preços e se o lugar continua aberto."));
+      var rg = el("button", "linkbtn", "Apagar sugestões"); rg.type = "button"; rg.onclick = function () { var nv = Object.assign({}, v); delete nv.dicas; Store.salvarViagem(nv).catch(erroSalvar); }; ci.appendChild(rg);
+    }
+    main.appendChild(ci);
+  }
+}
+function norm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim(); }
+
+function gerarDicas(v) {
+  gerandoDicas = true; erroDicas = ""; render();
+  var fim = function (msg) { gerandoDicas = false; erroDicas = msg || ""; render(); };
+  window.claude.use("sample").then(function (sample) {
+    if (!sample) { fim("As sugestões por IA não estão disponíveis aqui."); return; }
+    var prompt = "Você ajuda um viajante brasileiro. Destino: " + destinoBusca(v) + ". Datas: " + v.ida + " a " + v.volta + ".\n" +
+      "Responda SOMENTE com um objeto JSON em português do Brasil, neste formato:\n" +
+      '{"resumo":"2 frases","onde_ir":[{"nome":"","porque":"1 frase","custo":"grátis ou faixa em R$"}],"onde_comer":[{"lugar":"bairro, mercado ou restaurante muito conhecido","o_que_pedir":"","faixa":"econômico, médio ou caro"}]}\n' +
+      "Regras: 5 a 7 itens em onde_ir e 4 a 6 em onde_comer. Só lugares reais, conhecidos e estáveis. Se não tiver certeza de um restaurante, indique a região ou o tipo de comida, nunca invente nomes.";
+    return sample.json(prompt, { modelTier: "default" }).then(function (d) {
+      if (!d || typeof d !== "object") { fim("A resposta veio num formato inesperado. Tente de novo."); return; }
+      var nv = Object.assign({}, v); nv.dicas = d;
+      return Store.salvarViagem(nv).then(function () { fim(""); });
+    });
+  }).catch(function (e) {
+    var code = e && e.code;
+    fim(code === "not_granted" ? "Você não autorizou o uso do Claude nesta página." : code === "rate_limited" ? "Muitos pedidos agora. Tente mais tarde." : "Não consegui gerar as sugestões agora.");
+  });
+}
+
+function abrirLugar(l) {
+  if (!Store.podeEditar()) { toast("Você tem acesso só para ver estes dados."); return; }
+  var sh = folha(l ? "Editar lugar" : "Adicionar lugar");
+  var nome = campo(sh, "flNome", "Nome do lugar", "text", l ? l.nome : "", { placeholder: "Ex.: Mercado Municipal", autocomplete: "off" });
+  sh.appendChild(el("span", "lbl", "Tipo"));
+  var tp = el("div", "paypick"); tp.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))"; sh.appendChild(tp);
+  var tipo = l ? l.tipo : "visitar";
+  TIPOS_LUGAR.forEach(function (t) {
+    var b = el("button"); b.type = "button"; b.setAttribute("aria-pressed", t.id === tipo ? "true" : "false");
+    b.appendChild(svgIc(t.ic, 20)); b.appendChild(document.createTextNode(t.nome));
+    b.onclick = function () { tipo = t.id; Array.prototype.forEach.call(tp.children, function (x, i) { x.setAttribute("aria-pressed", TIPOS_LUGAR[i].id === tipo ? "true" : "false"); }); };
+    tp.appendChild(b);
+  });
+  var end = campo(sh, "flEnd", "Endereço ou bairro (opcional)", "text", l ? l.endereco || "" : "", { placeholder: "Ex.: Centro", autocomplete: "off" });
+  var fx = campo(sh, "flFaixa", "Faixa de preço (opcional)", "select");
+  [["", "Não informar"], ["Grátis", "Grátis"], ["$", "$ econômico"], ["$$", "$$ médio"], ["$$$", "$$$ caro"]].forEach(function (o) { var op = el("option", null, o[1]); op.value = o[0]; fx.appendChild(op); });
+  fx.value = l ? l.faixa || "" : "";
+  var stt = campo(sh, "flStatus", "Situação", "select");
+  [["quero", "Quero ir"], ["fui", "Já fui"]].forEach(function (o) { var op = el("option", null, o[1]); op.value = o[0]; stt.appendChild(op); });
+  stt.value = l ? l.status || "quero" : "quero";
+  var nota = campo(sh, "flNota", "Anotação (opcional)", "text", l ? l.nota || "" : "", { placeholder: "Ex.: pedir o pastel de queijo", autocomplete: "off" });
+  var msg = el("p", "notice"); msg.hidden = true; sh.appendChild(msg);
+  var row = el("div", "row");
+  var sv = el("button", "btn cta", l ? "Salvar" : "Adicionar"); sv.type = "button"; row.appendChild(sv);
+  if (l) {
+    var del = el("button", "btn danger", "Apagar"); del.type = "button"; row.appendChild(del);
+    del.onclick = function () {
+      if (del.dataset.ok !== "1") { del.dataset.ok = "1"; del.textContent = "Confirmar apagar"; del.className = "btn danger solid"; return; }
+      Store.apagarLugar(l.id).then(function () { fecharFolha(); toast("Lugar apagado"); }).catch(erroSalvar);
+    };
+  }
+  sh.appendChild(row);
+  sv.onclick = function () {
+    if (!nome.value.trim()) { msg.hidden = false; msg.textContent = "Escreva o nome do lugar."; nome.focus(); return; }
+    var n = { id: l ? l.id : novoId("l_"), nome: nome.value.trim(), tipo: tipo, endereco: end.value.trim(), faixa: fx.value, status: stt.value, nota: nota.value.trim(), criadoEm: l ? l.criadoEm : new Date().toISOString() };
+    sv.disabled = true;
+    Store.salvarLugar(n).then(function () { fecharFolha(); toast(l ? "Lugar atualizado" : "Lugar adicionado"); }).catch(function (e) { sv.disabled = false; erroSalvar(e); });
+  };
+  setTimeout(function () { nome.focus(); }, 50);
+}
+/* Quando um gasto tem "Onde foi", o lugar entra em Meus lugares como visitado. */
+function lugarDoGasto(g) {
+  if (!g.local) return;
+  if (Store.lugares.some(function (l) { return norm(l.nome) === norm(g.local); })) {
+    var l = Store.lugares.filter(function (x) { return norm(x.nome) === norm(g.local); })[0];
+    if (l.status !== "fui") Store.salvarLugar(Object.assign({}, l, { status: "fui" })).catch(function () {});
+    return;
+  }
+  var tipo = g.categoria === "restaurante" || g.categoria === "mercado" ? "comer" : g.categoria === "passeios" || g.categoria === "lazer" ? "visitar" : "outro";
+  Store.salvarLugar({ id: novoId("l_"), nome: g.local, tipo: tipo, endereco: "", faixa: "", status: "fui", nota: "", origem: "gasto", criadoEm: new Date().toISOString() }).catch(function () {});
+}
+
+/* ---------- Folhas: viagem e gasto ---------- */
+function fecharFolha() { $("layer").textContent = ""; }
+function folha(titulo) {
+  var scrim = el("div", "scrim"); scrim.onclick = function (e) { if (e.target === scrim) fecharFolha(); };
+  var sh = el("div", "sheet"); sh.setAttribute("role", "dialog"); sh.setAttribute("aria-modal", "true"); sh.setAttribute("aria-label", titulo);
+  var h = el("h3", null, titulo); var x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "Fechar"); x.onclick = fecharFolha; h.appendChild(x);
+  sh.appendChild(h); scrim.appendChild(sh); $("layer").textContent = ""; $("layer").appendChild(scrim);
+  document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { fecharFolha(); document.removeEventListener("keydown", esc); } });
+  return sh;
+}
+function secao(sh, n, titulo, sub) {
+  var s = el("div", "secao"); s.appendChild(el("i", null, String(n)));
+  var tx = el("div"); tx.appendChild(el("b", null, titulo)); if (sub) tx.appendChild(el("small", null, sub)); s.appendChild(tx);
+  sh.appendChild(s); return s;
+}
+function campo(sh, id, rotulo, tipo, valor, extra) {
+  var f = el("div", "f"); var l = el("label", null, rotulo); l.htmlFor = id; f.appendChild(l);
+  var i = document.createElement(tipo === "select" ? "select" : "input"); i.id = id;
+  if (tipo === "money") { campoMoeda(i, valor); i.classList.add("money"); } else { if (tipo !== "select") i.type = tipo; if (valor != null) i.value = valor; }
+  if (extra) Object.keys(extra).forEach(function (k) { i[k] = extra[k]; });
+  f.appendChild(i); sh.appendChild(f); return i;
+}
+function erroSalvar(e) {
+  var code = e && e.code;
+  if (Store.modo === "gas" && e && e.message && !code) return; // o aviso do servidor já foi mostrado
+  toast(code === "somente_leitura" ? "Você tem acesso só para ver estes dados." : code === "quota_exceeded" ? "Espaço cheio: apague viagens antigas." : code === "invalid_argument" ? "Você não tem permissão para salvar aqui." : "Não consegui salvar. Tente de novo.");
+}
+
+function abrirViagem(v) {
+  if (!Store.podeEditar()) { toast("Você tem acesso só para ver estes dados."); return; }
+  var sh = folha(v ? "Editar viagem" : "Nova viagem");
+  secao(sh, 1, "Para onde e quando", "O nome aparece no topo do painel.");
+  var iD = campo(sh, "fvDestino", "Nome ou destino da viagem", "text", v ? v.destino : "", { placeholder: "Ex.: Bonito, MS", autocomplete: "off" });
+  var iO = campo(sh, "fvOrigem", "Saindo de (opcional)", "text", v ? v.origem || "" : "", { placeholder: "Ex.: Cuiabá", autocomplete: "off" });
+  var ida = v ? v.ida : "", volta = v ? v.volta : "", ponta = "ida";
+  sh.appendChild(el("span", "lbl", "Datas da viagem: toque na ida e depois na volta"));
+  var dbox = el("div", "dpair");
+  var bI = el("button", "dbtn"); bI.type = "button"; var bV = el("button", "dbtn"); bV.type = "button";
+  dbox.appendChild(bI); dbox.appendChild(bV); sh.appendChild(dbox);
+  var cal = calendario({ de: ida, ate: volta, onPick: function (d) {
+    if (ponta === "ida") { ida = d; if (volta && volta < d) volta = ""; ponta = "volta"; }
+    else { if (d < ida) { volta = ida; ida = d; } else volta = d; ponta = "ida"; }
+    sync();
+  } });
+  sh.appendChild(cal);
+  function sync() {
+    bI.textContent = ""; bV.textContent = "";
+    bI.appendChild(el("small", null, "Ida")); bI.appendChild(el("b", null, ida ? dataLonga(ida) : "Escolha"));
+    bV.appendChild(el("small", null, "Volta")); bV.appendChild(el("b", null, volta ? dataLonga(volta) : "Escolha"));
+    bI.classList.toggle("ativo", ponta === "ida"); bV.classList.toggle("ativo", ponta === "volta");
+    cal.atualizar({ de: ida, ate: volta });
+  }
+  bI.onclick = function () { ponta = "ida"; sync(); if (ida) cal.irPara(ida); };
+  bV.onclick = function () { ponta = "volta"; sync(); if (volta) cal.irPara(volta); };
+  sync();
+  secao(sh, 2, "Como vai e o que o valor cobre", "Assim o painel separa a viagem do que você já pagou à parte.");
+  var c0 = cobre(v || {});
+  var estCob = { vai: v && v.vai ? v.vai : "", ida: c0.ida, hosp: c0.hosp };
+  var cobBox = coberturaUI(estCob, function () { syncLbl(); }); sh.appendChild(cobBox);
+  secao(sh, 3, "Quanto você tem", "Digite só números: 500000 vira 5.000,00.");
+  var o = campo(sh, "fvOrc", "Tenho para gastar (R$)", "money", v ? v.orcamento : 0, { placeholder: "0,00" });
+  var lblCob = el("p", "hint"); sh.appendChild(lblCob);
+  function syncLbl() { lblCob.textContent = "Esse valor cobre: " + textoCobre({ vai: estCob.vai, cobre: { ida: estCob.ida, hosp: estCob.hosp } }) + "."; }
+  syncLbl();
+  var temPag = v && v.orcPag && Object.keys(v.orcPag).length;
+  var tg = el("button", "togrow"); tg.type = "button"; tg.setAttribute("aria-expanded", temPag ? "true" : "false");
+  tg.appendChild(el("span", null, "Dividir por forma de pagamento")); tg.appendChild(el("small", null, "opcional")); tg.appendChild(el("i", null, "›"));
+  sh.appendChild(tg);
+  var pgw = el("div", "pgwrap"); pgw.hidden = !temPag; sh.appendChild(pgw);
+  tg.onclick = function () { pgw.hidden = !pgw.hidden; tg.setAttribute("aria-expanded", pgw.hidden ? "false" : "true"); };
+  pgw.appendChild(el("p", "hint", "Diga quanto desse valor vai em dinheiro, no cartão de crédito ou sai da conta (Pix e débito). Deixe em branco o que não quiser controlar."));
+  var pg = el("div", "paysplit"); pgw.appendChild(pg);
+  var pagIn = {};
+  GRUPOS.forEach(function (gr) {
+    var f = el("div", "f"); var lb = el("label", null, gr.nome); lb.htmlFor = "fvPag_" + gr.id; f.appendChild(lb);
+    var inp = campoMoeda(document.createElement("input"), v && v.orcPag && v.orcPag[gr.id] ? v.orcPag[gr.id] : 0); inp.id = "fvPag_" + gr.id; inp.placeholder = "0,00";
+    f.appendChild(inp); pg.appendChild(f); pagIn[gr.id] = inp;
+  });
+  var somaPag = el("p", "hint num"); pgw.appendChild(somaPag);
+  var syncPag = function () {
+    var s = 0; GRUPOS.forEach(function (gr) { s += valorDe(pagIn[gr.id]); });
+    var tot = valorDe(o);
+    somaPag.textContent = !s ? "" : Math.abs(s - tot) < 0.01 ? "Bate com o valor total." : s < tot ? "Faltam " + brl2(tot - s) + " para chegar ao total (pode ficar como valor geral)." : "Passa " + brl2(s - tot) + " do total.";
+  };
+  pg.addEventListener("input", syncPag); o.addEventListener("input", syncPag); syncPag();
+  secao(sh, 4, "Moeda do destino", "Para viagens fora do Brasil. Os gastos são convertidos para real.");
+  var ml = campo(sh, "fvMoeda", "Moeda do destino", "select");
+  Object.keys(MOEDAS).forEach(function (k) { var op = el("option", null, MOEDAS[k][0] + " (" + MOEDAS[k][1] + ")"); op.value = k; ml.appendChild(op); });
+  ml.value = v && v.moedaLocal ? v.moedaLocal : "BRL";
+  var boxC = el("div"); sh.appendChild(boxC);
+  var cot = null;
+  function syncCot() {
+    boxC.textContent = ""; cot = null;
+    if (ml.value === "BRL") return;
+    var atual = v && v.cotacoes && v.cotacoes[ml.value] ? v.cotacoes[ml.value] : MOEDAS[ml.value][2];
+    cot = campo(boxC, "fvCot", "1 " + ml.value + " vale quantos reais", "number", atual, { step: "0.0001", min: "0", inputMode: "decimal" });
+    boxC.appendChild(el("p", "hint", "Valor de exemplo. Coloque a cotação que você pagou no câmbio ou a do dia."));
+  }
+  ml.onchange = syncCot; syncCot();
+  var msg = el("p", "notice"); msg.hidden = true; sh.appendChild(msg);
+  var sv = el("button", "btn cta", v ? "Salvar alterações" : "Criar viagem"); sv.type = "button"; sh.appendChild(sv);
+  sv.onclick = function () {
+    var dest = iD.value.trim();
+    if (!dest) { msg.hidden = false; msg.textContent = "Escreva o destino."; iD.focus(); return; }
+    if (!ida || !volta) { msg.hidden = false; msg.textContent = "Escolha no calendário o dia da ida e o da volta."; return; }
+    var nv = Object.assign({}, v || {}, { id: v ? v.id : novoId("v_"), destino: dest, nome: dest, origem: iO.value.trim(), ida: ida, volta: volta,
+      orcamento: valorDe(o), vai: estCob.vai, cobre: { ida: estCob.ida, hosp: estCob.hosp }, escopo: estCob.ida && estCob.hosp ? "tudo" : "destino", moedaLocal: ml.value, criadoEm: v ? v.criadoEm : new Date().toISOString() });
+    if (v) { var cAnt = cobre(v); if (cAnt.ida !== estCob.ida || cAnt.hosp !== estCob.hosp) { delete nv.orcCat; delete nv.orcPct; } }
+    nv.orcPag = {}; GRUPOS.forEach(function (gr) { var x = valorDe(pagIn[gr.id]); if (x > 0) nv.orcPag[gr.id] = x; });
+    nv.cotacoes = Object.assign({}, (v && v.cotacoes) || {}); if (cot) nv.cotacoes[ml.value] = n0(cot.value, MOEDAS[ml.value][2]);
+    if (v && v.destino !== dest) delete nv.dicas;
+    sv.disabled = true;
+    Store.pendente = nv.id;
+    Store.salvarViagem(nv).then(function () { fecharFolha(); Store.escolher(nv.id); toast(v ? "Viagem atualizada" : "Viagem criada"); }).catch(function (e) { sv.disabled = false; erroSalvar(e); });
+  };
+  setTimeout(function () { iD.focus(); }, 50);
+}
+function abrirGasto(g) {
+  if (!Store.podeEditar()) { toast("Você tem acesso só para ver estes dados."); return; }
+  var v = viagemAtual(); if (!v) return;
+  var sh = folha(g ? "Editar gasto" : "Lançar gasto");
+  var linha = el("div", "f2"); linha.style.gridTemplateColumns = "minmax(0, 1.6fr) minmax(0, 1fr)"; sh.appendChild(linha);
+  var val = campo(linha, "fgValor", "Valor", "money", g ? g.valor : 0, { placeholder: "0,00" });
+  var mo = campo(linha, "fgMoeda", "Moeda", "select");
+  Object.keys(MOEDAS).forEach(function (k) { var op = el("option", null, k); op.value = k; mo.appendChild(op); });
+  mo.value = g ? g.moeda : (v.moedaLocal || "BRL");
+  var conv = el("p", "hint num"); sh.appendChild(conv);
+
+  sh.appendChild(el("span", "lbl", "Como pagou"));
+  var pg = el("div", "paypick"); pg.setAttribute("role", "group"); pg.setAttribute("aria-label", "Forma de pagamento"); sh.appendChild(pg);
+  var pag = g ? (g.pagamento || "") : (pref("pag") || "");
+  PAG.forEach(function (p) {
+    var b = el("button"); b.type = "button"; b.setAttribute("aria-pressed", p.id === pag ? "true" : "false");
+    b.appendChild(svgIc(p.ic, 20)); b.appendChild(document.createTextNode(p.nome));
+    b.onclick = function () { pag = pag === p.id ? "" : p.id; Array.prototype.forEach.call(pg.children, function (x, i) { x.setAttribute("aria-pressed", PAG[i].id === pag ? "true" : "false"); }); };
+    pg.appendChild(b);
+  });
+
+  sh.appendChild(el("span", "lbl", "Categoria"));
+  var cp = el("div", "catpick"); cp.setAttribute("role", "group"); cp.setAttribute("aria-label", "Categoria"); sh.appendChild(cp);
+  var cat = g ? g.categoria : "restaurante";
+  CATS.forEach(function (c) {
+    var b = el("button"); b.type = "button"; b.setAttribute("aria-pressed", c.id === cat ? "true" : "false");
+    b.appendChild(catIcon(c.id, 16)); b.appendChild(document.createTextNode(c.nome));
+    b.onclick = function () { cat = c.id; Array.prototype.forEach.call(cp.children, function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); };
+    cp.appendChild(b);
+  });
+  var ds = campo(sh, "fgDesc", "Descrição (opcional)", "text", g ? g.descricao || "" : "", { placeholder: "Ex.: Almoço", autocomplete: "off" });
+  var lc = campo(sh, "fgLocal", "Onde foi (opcional)", "text", g ? g.local || "" : "", { placeholder: "Ex.: Restaurante Casa do Peixe, Centro", autocomplete: "off" });
+
+  sh.appendChild(el("span", "lbl", "Data"));
+  var data = g ? g.data : (hoje() < v.ida ? hoje() : hoje() > v.volta ? v.volta : hoje());
+  var drow = el("div", "row");
+  var bHoje = el("button", "fchip", "Hoje"); bHoje.type = "button";
+  var bOntem = el("button", "fchip", "Ontem"); bOntem.type = "button";
+  var bCal = el("button", "dbtn inline"); bCal.type = "button";
+  drow.appendChild(bHoje); drow.appendChild(bOntem); drow.appendChild(bCal); sh.appendChild(drow);
+  var cal = calendario({ sel: data, faixaViagem: [v.ida, v.volta], onPick: function (d) { data = d; syncData(); cal.hidden = true; } });
+  cal.hidden = true; sh.appendChild(cal);
+  function syncData() {
+    bCal.textContent = ""; bCal.appendChild(svgIc('<rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>', 18));
+    bCal.appendChild(document.createTextNode(dataLonga(data)));
+    bHoje.setAttribute("aria-pressed", data === hoje() ? "true" : "false"); bOntem.setAttribute("aria-pressed", data === addDias(hoje(), -1) ? "true" : "false");
+    cal.atualizar({ sel: data });
+  }
+  bHoje.onclick = function () { data = hoje(); syncData(); };
+  bOntem.onclick = function () { data = addDias(hoje(), -1); syncData(); };
+  bCal.onclick = function () { cal.hidden = !cal.hidden; if (!cal.hidden) cal.irPara(data); };
+  syncData();
+
+  function taxa() { return mo.value === "BRL" ? 1 : (v.cotacoes && v.cotacoes[mo.value]) || MOEDAS[mo.value][2]; }
+  function syncConv() { var x = valorDe(val); conv.textContent = mo.value === "BRL" ? "" : "≈ " + brl2(x * taxa()) + " (1 " + mo.value + " = R$ " + taxa().toLocaleString("pt-BR", { maximumFractionDigits: 4 }) + ", ajuste em Editar viagem)"; }
+  val.addEventListener("input", syncConv); mo.addEventListener("change", syncConv); syncConv();
+  var msg = el("p", "notice"); msg.hidden = true; sh.appendChild(msg);
+  var row = el("div", "row");
+  var sv = el("button", "btn cta", g ? "Salvar alterações" : "Lançar gasto"); sv.type = "button"; row.appendChild(sv);
+  if (g) {
+    var del = el("button", "btn danger", "Apagar"); del.type = "button"; row.appendChild(del);
+    del.onclick = function () {
+      if (del.dataset.ok !== "1") { del.dataset.ok = "1"; del.textContent = "Confirmar apagar"; del.className = "btn danger solid"; return; }
+      del.disabled = true; Store.apagarGasto(g.id).then(function () { fecharFolha(); toast("Gasto apagado"); }).catch(erroSalvar);
+    };
+  }
+  sh.appendChild(row);
+  sv.onclick = function () {
+    var x = valorDe(val);
+    if (!(x > 0)) { msg.hidden = false; msg.textContent = "Digite um valor maior que zero."; val.focus(); return; }
+    var t = taxa();
+    var ng = { id: g ? g.id : novoId("g_"), valor: x, moeda: mo.value, cotacao: t, valorBRL: Math.round(x * t * 100) / 100, categoria: cat, pagamento: pag,
+      descricao: ds.value.trim(), local: lc.value.trim(), data: data, criadoEm: g ? g.criadoEm : new Date().toISOString() };
+    if (pag) pref("pag", pag);
+    sv.disabled = true;
+    Store.salvarGasto(ng).then(function () { lugarDoGasto(ng); fecharFolha(); toast(g ? "Gasto atualizado" : "Gasto lançado"); }).catch(function (e) { sv.disabled = false; erroSalvar(e); });
+  };
+  setTimeout(function () { val.focus(); }, 50);
+}
+function abrirAporte(v, sugestao, grupo, cat) {
+  if (!Store.podeEditar()) { toast("Você tem acesso só para ver estes dados."); return; }
+  var sh = folha("Adicionar ao orçamento");
+  sh.appendChild(el("p", "hint", "Use quando a viagem precisar de mais dinheiro: o valor entra no orçamento total e fica registrado no histórico."));
+  var val = campo(sh, "faValor", "Quanto vai adicionar (R$)", "money", sugestao ? Math.ceil(sugestao) : 0, { placeholder: "0,00" });
+  var modo = modoOrc(v);
+  var sc = null;
+  if (modo !== "total") {
+    sc = campo(sh, "faCat", "Reforçar uma categoria (opcional)", "select");
+    var o0 = el("option", null, "Só o total, sem categoria"); o0.value = ""; sc.appendChild(o0);
+    catsOrc(v).forEach(function (c) { var op = el("option", null, c.nome); op.value = c.id; sc.appendChild(op); });
+    sc.value = cat || "";
+  }
+  var sg = campo(sh, "faGrupo", "Também aumentar o limite de (opcional)", "select");
+  var g0 = el("option", null, "Nenhum"); g0.value = ""; sg.appendChild(g0);
+  GRUPOS.forEach(function (gr) { var op = el("option", null, gr.nome); op.value = gr.id; sg.appendChild(op); });
+  sg.value = grupo || "";
+  var nota = campo(sh, "faNota", "Observação (opcional)", "text", "", { placeholder: "Ex.: saque no caixa eletrônico" });
+  var msg = el("p", "notice"); msg.hidden = true; sh.appendChild(msg);
+  var sv = el("button", "btn cta", "Adicionar"); sv.type = "button"; sh.appendChild(sv);
+  sv.onclick = function () {
+    var x = valorDe(val);
+    if (!(x > 0)) { msg.hidden = false; msg.textContent = "Digite um valor maior que zero."; return; }
+    var nv = Object.assign({}, v); nv.orcamento = (v.orcamento || 0) + x;
+    var c = sc ? sc.value : "";
+    if (modo === "valor") { nv.orcCat = Object.assign({}, orcCat(v)); if (c) nv.orcCat[c] = (nv.orcCat[c] || 0) + x; else { var o = orcCat(v); nv.orcCat = o; } }
+    if (modo === "auto" && c) { nv.orcModo = "valor"; nv.orcCat = orcCat(v); nv.orcCat[c] += x; }
+    if (modo === "pct" && c) {
+      var antes = orcCat(v); antes[c] += x; nv.orcPct = {};
+      catsOrc(v).forEach(function (k) { nv.orcPct[k.id] = Math.round(antes[k.id] / nv.orcamento * 1000) / 10; });
+    }
+    if (sg.value) { nv.orcPag = Object.assign({}, v.orcPag || {}); nv.orcPag[sg.value] = (nv.orcPag[sg.value] || 0) + x; }
+    nv.aportes = (v.aportes || []).concat([{ valor: x, data: hoje(), categoria: c, grupo: sg.value, nota: nota.value.trim() }]);
+    sv.disabled = true;
+    Store.salvarViagem(nv).then(function () { fecharFolha(); toast("Adicionado ao orçamento"); }).catch(function (e) { sv.disabled = false; erroSalvar(e); });
+  };
+}
+
+/* ---------- Exemplo ---------- */
+function criarExemplo() {
+  var ida = addDias(hoje(), -3), volta = addDias(hoje(), 3);
+  var v = { id: novoId("v_"), destino: "Bonito, MS (exemplo)", nome: "Exemplo: Bonito", origem: "Cuiabá", ida: ida, volta: volta, orcamento: 5000, moedaLocal: "BRL", escopo: "tudo", orcPag: { dinheiro: 400 }, exemplo: true, criadoEm: new Date().toISOString() };
+  var G = [
+    [-20, "transporte", "credito", "Combustível e pedágio (ida e volta)", 780, "Posto na saída de Cuiabá"], [-15, "hospedagem", "pix", "Pousada, 6 noites", 1650, "Pousada do exemplo"],
+    [0, "restaurante", "debito", "Almoço na estrada", 96, ""], [0, "mercado", "dinheiro", "Água e lanches", 42, ""],
+    [1, "passeios", "credito", "Gruta do Lago Azul", 220, "Agência no centro"], [1, "restaurante", "credito", "Jantar", 148, "Rua principal"], [1, "local", "dinheiro", "Estacionamento", 25, ""],
+    [2, "passeios", "credito", "Flutuação no rio", 640, ""], [2, "restaurante", "pix", "Almoço", 60, ""], [2, "lazer", "dinheiro", "Lembrancinhas", 85, "Feirinha"],
+    [3, "passeios", "pix", "Buraco das Araras", 160, ""], [3, "restaurante", "debito", "Pintado na brasa", 172, ""], [3, "mercado", "dinheiro", "Café da tarde", 38, "Padaria"]
+  ];
+  var gs = [];
+  G.forEach(function (x, i) {
+    var data = addDias(ida, x[0]);
+    if (data > hoje()) return;
+    gs.push({ id: novoId("g_") + i, valor: x[4], moeda: "BRL", cotacao: 1, valorBRL: x[4], categoria: x[1], pagamento: x[2], descricao: x[3], local: x[5], data: data, criadoEm: new Date(Date.now() + i).toISOString() });
+  });
+  Store.pendente = v.id;
+  Store.salvarLote(v, gs).then(function () { Store.escolher(v.id); toast("Viagem de exemplo criada"); }).catch(erroSalvar);
+  if (Store.modo === "gas") Store.escolher(v.id);
+}
+
+/* ---------- Abas e início ---------- */
+function trocarAba(t) {
+  aba = t; confirmar = ""; escopoTemp = null; modoTemp = null;
+  Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false"); });
+  render(); window.scrollTo(0, 0);
+}
+Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) { b.onclick = function () { trocarAba(b.dataset.tab); }; });
+$("tripSel").onchange = function () { Store.escolher(this.value); };
+$("fonteSel").onchange = function () { Store.trocarFonte(this.value); };
+$("novaViagem").onclick = function () { abrirViagem(null); };
+(function () {
+  var b = document.querySelector(".brand"); if (!b) return;
+  b.setAttribute("role", "button"); b.tabIndex = 0; b.title = "Ir para o Painel";
+  var ir = function () { fecharFolha(); if (viagemAtual()) trocarAba("painel"); else window.scrollTo(0, 0); };
+  b.onclick = ir; b.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ir(); } };
+})();
+$("fab").onclick = function () { abrirGasto(null); };
+/* ---------- Conta, acesso e exemplos ---------- */
+function limparExemplos() {
+  var ex = Store.viagens.filter(function (x) { return x.exemplo; });
+  if (!ex.length) { toast("Não há viagens de exemplo"); return; }
+  var seq = Promise.resolve();
+  ex.forEach(function (x) { seq = seq.then(function () { return Store.apagarViagem(x.id); }); });
+  seq.then(function () { fecharFolha(); aba = "painel"; Store.escolher(null); toast(ex.length > 1 ? ex.length + " exemplos apagados" : "Exemplo apagado"); }).catch(erroSalvar);
+}
+function abrirConta() {
+  var sh = folha("Conta e acesso");
+  var quem = el("div", "who"); sh.appendChild(quem);
+  var desenharQuem = function (me) {
+    quem.textContent = "";
+    if (me && me.avatarUrl) { var im = document.createElement("img"); im.src = me.avatarUrl; im.alt = ""; quem.appendChild(im); }
+    var tx = el("div");
+    tx.appendChild(el("b", null, Store.modo === "gas" ? (typeof GD !== "undefined" && GD.nome ? GD.nome + " · " : "") + Store.email : me && me.name ? me.name : (Store.modo === "db" ? "Você" : "Uso neste navegador")));
+    tx.appendChild(el("span", "hint", Store.modo === "gas" ? "Suas viagens ficam numa planilha no seu Google Drive." : Store.modo === "db" ? "Suas viagens ficam na sua conta e só você vê." : "As viagens estão guardadas só neste navegador."));
+    quem.appendChild(tx);
+  };
+  desenharQuem(null);
+  if (Store.user && Store.user.me) Store.user.me().then(desenharQuem);
+
+  if (typeof GD !== "undefined") {
+    var bs = el("button", "btn", "Sair desta conta"); bs.type = "button"; bs.style.justifySelf = "start"; bs.onclick = sairDoApp; sh.appendChild(bs);
+  }
+  if (Store.modo === "gas") {
+    // Qual conjunto de dados está aberto
+    if (Store.fontes.length > 1) {
+      var cf = el("div", "acc"); cf.appendChild(el("b", null, "Dados que você está vendo"));
+      Store.fontes.forEach(function (f) {
+        var b = el("button", "fonte" + (f.id === Store.fonte ? " on" : "")); b.type = "button";
+        b.appendChild(el("b", null, f.nome)); b.appendChild(el("span", "hint", f.nivel === "dono" ? "seus dados" : f.nivel === "editar" ? "você pode ver e editar" : "você pode só ver"));
+        b.onclick = function () { fecharFolha(); Store.trocarFonte(f.id); };
+        cf.appendChild(b);
+      });
+      sh.appendChild(cf);
+    }
+    var minha = Store.fontes[0];
+    var cp = el("div", "acc");
+    cp.appendChild(el("b", null, "Sua planilha"));
+    cp.appendChild(el("p", "hint", "Tudo o que você lança fica nela, no seu Drive. Não renomeie as abas nem as colunas."));
+    var ap = el("a", "btn", "Abrir no Google Drive ↗"); ap.href = minha.url; ap.target = "_blank"; ap.rel = "noopener noreferrer"; ap.style.justifySelf = "start"; cp.appendChild(ap);
+    sh.appendChild(cp);
+
+    var ca = el("div", "acc");
+    ca.appendChild(el("b", null, "Quem pode acessar os seus dados"));
+    ca.appendChild(el("p", "hint", typeof GD !== "undefined" ? "A pessoa entra no BFin Travel com a conta desse e-mail e toca em Conta e acesso > Abrir dados compartilhados comigo." : "A pessoa abre o mesmo link do BFin Travel com a conta Google desse e-mail e escolhe \"Viagens de " + Store.email + "\" no topo."));
+    var lista = el("div", "levels"); ca.appendChild(lista);
+    var desenharLista = function (acs) {
+      lista.textContent = "";
+      if (!acs.length) { lista.appendChild(el("p", "hint", "Ninguém além de você.")); return; }
+      acs.forEach(function (a) {
+        var r = el("div", "acrow");
+        var t = el("div"); t.appendChild(el("b", null, a.email)); t.appendChild(el("span", "hint", a.nivel === "editar" ? "Pode ver e editar" : "Pode só ver")); r.appendChild(t);
+        var rm = el("button", "btn danger", "Remover"); rm.type = "button"; rm.style.minHeight = "36px";
+        rm.onclick = function () {
+          if (rm.dataset.ok !== "1") { rm.dataset.ok = "1"; rm.textContent = "Confirmar"; rm.className = "btn danger solid"; return; }
+          rm.disabled = true; chamar("removerAcesso", [a.email]).then(function (n) { desenharLista(n); toast("Acesso removido"); }).catch(function (e) { rm.disabled = false; toast(e.message || "Não consegui remover."); });
+        };
+        r.appendChild(rm); lista.appendChild(r);
+      });
+    };
+    lista.appendChild(el("p", "hint", "Carregando…"));
+    chamar("listarAcessos").then(desenharLista).catch(function () { lista.textContent = ""; lista.appendChild(el("p", "hint", "Não consegui carregar a lista.")); });
+    var fr = el("div", "addacc");
+    var em = document.createElement("input"); em.type = "email"; em.id = "acEmail"; em.placeholder = "e-mail da conta Google"; em.setAttribute("aria-label", "E-mail de quem vai ter acesso"); em.autocomplete = "off";
+    var nv = document.createElement("select"); nv.id = "acNivel"; nv.setAttribute("aria-label", "Nível de acesso");
+    [["editar", "Ver e editar"], ["ver", "Só ver"]].forEach(function (o) { var op = el("option", null, o[1]); op.value = o[0]; nv.appendChild(op); });
+    var bt = el("button", "btn cta", "Dar acesso"); bt.type = "button";
+    bt.onclick = function () {
+      var e = em.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast("Digite um e-mail válido."); em.focus(); return; }
+      bt.disabled = true;
+      chamar("concederAcesso", [e, nv.value]).then(function (n) { em.value = ""; desenharLista(n); toast("Acesso liberado para " + e); }).catch(function (x) { toast(x.message || "Não consegui liberar o acesso."); }).then(function () { bt.disabled = false; });
+    };
+    fr.appendChild(em); fr.appendChild(nv); fr.appendChild(bt); ca.appendChild(fr);
+    ca.appendChild(el("p", "hint", "O Google pode avisar a pessoa por e-mail que uma planilha foi compartilhada com ela. Para tirar o acesso, use Remover."));
+    sh.appendChild(ca);
+    if (typeof GD !== "undefined") {
+      var cc = el("div", "acc"); cc.appendChild(el("b", null, "Dados compartilhados com você"));
+      cc.appendChild(el("p", "hint", "Se alguém liberou as viagens dele para você, toque abaixo e escolha a planilha \"BFin Travel – dados\" dessa pessoa. Basta fazer isso uma vez."));
+      var bc = el("button", "btn", "Abrir dados compartilhados comigo"); bc.type = "button"; bc.style.justifySelf = "start";
+      bc.onclick = function () { GD.abrirCompartilhado().then(function (id) { if (!id) return; fecharFolha(); toast("Dados adicionados. Escolha no topo de quem ver."); Store.fonte = id; Store.iniciar(); }).catch(function (e) { toast(e.message || "Não consegui abrir."); }); };
+      cc.appendChild(bc); sh.appendChild(cc);
+      var ci = el("div", "acc"); ci.appendChild(el("b", null, "Instalar no celular"));
+      ci.appendChild(el("p", "hint", "Android: no Chrome, toque em ⋮ e em Instalar app (ou Adicionar à tela inicial). iPhone: no Safari, toque em Compartilhar e em Adicionar à Tela de Início."));
+      sh.appendChild(ci);
+    }
+  } else {
+    var c1 = el("div", "acc");
+    c1.appendChild(el("b", null, "Cada pessoa tem os próprios dados"));
+    c1.appendChild(el("p", "hint", "Quem abre o BFin Travel com a conta dela vê só as viagens dela. Você não vê as dela, e ela não vê as suas."));
+    sh.appendChild(c1);
+    var c2 = el("div", "acc");
+    c2.appendChild(el("b", null, "Como dar acesso a alguém"));
+    var ol = el("ol", "clean");
+    ["Abra o menu Compartilhar desta página, no topo do Claude.", "Adicione a pessoa pelo e-mail ou libere o link.", "Escolha um nível que permita usar e salvar (colaborar ou editar)."].forEach(function (x) { ol.appendChild(el("li", null, x)); });
+    c2.appendChild(ol);
+    sh.appendChild(c2);
+  }
+
+  var c3 = el("div", "acc");
+  c3.appendChild(el("b", null, "Viagens de exemplo"));
+  var nEx = Store.viagens.filter(function (x) { return x.exemplo; }).length;
+  c3.appendChild(el("p", "hint", nEx ? "Você tem " + nEx + " viagem(ns) de exemplo." : "Nenhuma viagem de exemplo guardada."));
+  if (nEx && Store.podeEditar()) { var bl = el("button", "btn danger", "Limpar exemplos"); bl.type = "button"; bl.style.justifySelf = "start"; bl.onclick = function () { if (bl.dataset.ok !== "1") { bl.dataset.ok = "1"; bl.textContent = "Confirmar: apagar exemplos"; bl.className = "btn danger solid"; return; } bl.disabled = true; limparExemplos(); }; c3.appendChild(bl); }
+  sh.appendChild(c3);
+}
+$("contaBtn").onclick = abrirConta;
+if ($("instalarBtn")) $("instalarBtn").onclick = function () { if (!pedidoInstalar) return; pedidoInstalar.prompt(); pedidoInstalar.userChoice.then(function () { pedidoInstalar = null; $("instalarBtn").hidden = true; }); };
+if ($("apoioBtn")) $("apoioBtn").onclick = abrirApoio;
+
+/* Tema: automático, claro ou escuro (preferência guardada neste navegador) */
+var temaHost = document.documentElement.getAttribute("data-theme");
+var ICON_TEMA = { auto: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
+  claro: '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  escuro: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>' };
+var NOME_TEMA = { auto: "Tema automático", claro: "Tema claro", escuro: "Tema escuro" };
+function aplicarTema(t) {
+  if (t === "claro") document.documentElement.setAttribute("data-theme", "light");
+  else if (t === "escuro") document.documentElement.setAttribute("data-theme", "dark");
+  else if (temaHost) document.documentElement.setAttribute("data-theme", temaHost); else document.documentElement.removeAttribute("data-theme");
+  var b = $("temaBtn"); b.textContent = ""; b.appendChild(svgIc(ICON_TEMA[t], 20)); b.setAttribute("aria-label", NOME_TEMA[t] + ". Toque para trocar"); b.title = NOME_TEMA[t];
+}
+var temaAtual = pref("tema") || "escuro";
+aplicarTema(temaAtual);
+$("temaBtn").onclick = function () { temaAtual = { escuro: "claro", claro: "auto", auto: "escuro" }[temaAtual]; pref("tema", temaAtual); aplicarTema(temaAtual); toast(NOME_TEMA[temaAtual]); };
+render();
+appBoot();
+</script>
+
+</body>
+</html>
