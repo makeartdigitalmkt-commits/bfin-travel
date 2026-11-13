@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261113-165520">
+<meta name="build" content="20261113-180822">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -418,6 +418,7 @@
   .gbtn:disabled { opacity: 0.7; cursor: progress; }
   .loginfo { display: grid; gap: 4px; text-align: left; margin-top: 6px; }
   .apoio { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-color: var(--accent); background: linear-gradient(135deg, rgba(100,214,189,0.14), transparent 70%), var(--surface); }
+  .interesse { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .apoiotx { display: grid; gap: 4px; flex: 1 1 220px; }
   .foot { display: grid; justify-items: center; }
   .updbar { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--accent); box-shadow: 0 12px 40px rgba(0,0,0,0.4); font-weight: 700; font-size: 14px; max-width: 520px; margin-inline: auto; }
@@ -1190,6 +1191,18 @@ function cardParceiros() {
   c.appendChild(el("p", "hint", "Ao comprar por esses links, o BFin Travel pode receber uma comissão, sem custo extra para você."));
   return c;
 }
+/* Formulário de interesse na versão completa (deixe vazio para ocultar o cartão) */
+var INTERESSE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeug5enpAH1IsFhHxzKSBFv4qnurE4vuAe6xPPmh3r2XMZJeg/viewform?usp=header";
+function cardInteresse() {
+  if (!INTERESSE_URL) return null;
+  var c = el("div", "card interesse");
+  var t = el("div", "apoiotx");
+  t.appendChild(el("b", null, "Quer mais recursos?"));
+  t.appendChild(el("span", "hint", "Estamos preparando uma versão completa. Responda um formulário rápido e seja avisado quando sair."));
+  c.appendChild(t);
+  var a = el("a", "btn", "Quero ser avisado"); a.href = INTERESSE_URL; a.target = "_blank"; a.rel = "noopener noreferrer"; a.style.textDecoration = "none"; c.appendChild(a);
+  return c;
+}
 function cardApoio() {
   var c = el("div", "card apoio");
   var t = el("div", "apoiotx");
@@ -1201,7 +1214,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261113-165520";
+var BUILD = "20261113-180822";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1711,6 +1724,7 @@ function render() {
   else if (aba === "orcamento") renderOrcamento(main, v);
   else renderDicas(main, v);
   main.appendChild(cardApoio());
+  if (aba === "painel") { var ci = cardInteresse(); if (ci) main.appendChild(ci); }
 }
 
 function renderTopo(v) {
