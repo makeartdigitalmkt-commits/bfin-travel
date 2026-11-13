@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261113-181411">
+<meta name="build" content="20261113-182105">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -888,13 +888,27 @@ var GD = {
   },
 
   /* ---- Chamadas às APIs do Google ---- */
+  /* Tenta de novo sozinho quando o Google limita as chamadas (429): espera 1, 2, 4 e 8 s, com um pouco de sorteio para não bater todo mundo junto. */
   api: function (url, op) {
+    var n = 0;
+    var go = function () {
+      return GD.api1(url, op).catch(function (e) {
+        if (e && e.limite && n < 4) {
+          var espera = 1000 * Math.pow(2, n) + Math.random() * 800; n++;
+          return new Promise(function (ok) { setTimeout(ok, espera); }).then(go);
+        }
+        throw e;
+      });
+    };
+    return go();
+  },
+  api1: function (url, op) {
     op = op || {};
     if (!GD.token || Date.now() > GD.exp) { GD.expirou = true; try { localStorage.removeItem("carteira-sessao"); } catch (e) {} return Promise.reject(new Error("Sua sessão expirou. Toque em Continuar para entrar de novo.")); }
     var h = { Authorization: "Bearer " + GD.token }; if (op.body) h["Content-Type"] = "application/json";
     return fetch(url, { method: op.method || "GET", headers: h, body: op.body ? JSON.stringify(op.body) : undefined }).catch(function () { var e = new Error("Sem internet agora."); e.rede = true; throw e; }).then(function (r) {
       if (r.status === 401) { GD.expirou = true; try { localStorage.removeItem("carteira-sessao"); } catch (e) {} throw new Error("Sua sessão expirou. Toque em Continuar para entrar de novo."); }
-      if (r.status === 429) throw new Error("Muitos pedidos agora. Espere um minuto e tente de novo.");
+      if (r.status === 429) { var e429 = new Error("Muitos pedidos agora. Espere um minuto e tente de novo."); e429.limite = true; throw e429; }
       if (r.status === 403) return r.text().then(function (t) {
         var msg = ""; try { var j = JSON.parse(t); msg = (j.error && j.error.message) || ""; } catch (e) { msg = t || ""; }
         if (/has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(msg + t)) {
@@ -1214,7 +1228,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261113-181411";
+var BUILD = "20261113-182105";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
