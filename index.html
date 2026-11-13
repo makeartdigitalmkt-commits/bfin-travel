@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261113-180822">
+<meta name="build" content="20261113-181411">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -1214,7 +1214,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261113-180822";
+var BUILD = "20261113-181411";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1675,7 +1675,7 @@ function resumo(v) {
   var restantes = dias - passados;
   var projecao = passados ? total + media * restantes : null;
   var orc = v.orcamento || 0;
-  var resta = orc - total;
+  var resta = Math.round((orc - total) * 100) / 100; /* arredonda em centavos: evita "passou R$ 0,00" por resto de cálculo */
   var porDiaLivre = restantes > 0 ? resta / restantes : resta;
   var fase = h < v.ida ? "antes" : h > v.volta ? "depois" : "durante";
   return { dias: dias, passados: passados, restantes: restantes, total: total, antes: antes, durante: durante, porCat: porCat, porDia: porDia,
@@ -1784,8 +1784,8 @@ function renderPainel(main, v) {
   if (r.orc && r.resta < 0) alerta("bad", "Você passou " + brl(-r.resta) + " do orçamento.", "Adicionar ao orçamento", function () { abrirAporte(v, -r.resta); });
   else if (r.orc && r.pct >= 0.9) alerta("warn", "Você já usou " + Math.round(r.pct * 100) + "% do orçamento.", "Adicionar ao orçamento", function () { abrirAporte(v, 0); });
   var lim0 = v.orcPag || {}, din0 = 0; Store.gastos.forEach(function (g) { if (grupoDe(g) === "dinheiro") din0 += g.valorBRL || 0; });
-  if (lim0.dinheiro && din0 > lim0.dinheiro) alerta("bad", "O dinheiro levado acabou: passou " + brl(din0 - lim0.dinheiro) + ".", "Adicionar dinheiro", function () { abrirAporte(v, din0 - lim0.dinheiro, "dinheiro"); });
-  CATS.forEach(function (c) { var prev = oc[c.id] || 0, gasto = r.porCat[c.id] || 0; if (prev && gasto > prev && !fora(v, c.id)) alerta("warn", c.nome + " passou " + brl(gasto - prev) + " do previsto.", "Ajustar", function () { abrirAporte(v, gasto - prev, "", c.id); }); });
+  if (lim0.dinheiro && Math.round((din0 - lim0.dinheiro) * 100) > 0) alerta("bad", "O dinheiro levado acabou: passou " + brl(din0 - lim0.dinheiro) + ".", "Adicionar dinheiro", function () { abrirAporte(v, din0 - lim0.dinheiro, "dinheiro"); });
+  CATS.forEach(function (c) { var prev = oc[c.id] || 0, gasto = r.porCat[c.id] || 0; if (prev && Math.round((gasto - prev) * 100) > 0 && !fora(v, c.id)) alerta("warn", c.nome + " passou " + brl(gasto - prev) + " do previsto.", "Ajustar", function () { abrirAporte(v, gasto - prev, "", c.id); }); });
   if (alertas.childNodes.length) main.appendChild(alertas);
   if (r.fase === "depois" && Store.gastos.length) {
     var fim = el("div", "card fimv");
@@ -1836,10 +1836,10 @@ function renderPainel(main, v) {
     var mid = el("div");
     var nm = el("div", "nm"); nm.appendChild(el("b", null, c.nome)); nm.appendChild(el("span", "num", prev ? Math.round(gasto / prev * 100) + "%" : r.total ? Math.round(gasto / r.total * 100) + "% do gasto" : ""));
     mid.appendChild(nm);
-    var tr = el("div", "track"); var bar = el("i"); bar.style.width = Math.min(100, prev ? gasto / prev * 100 : r.total ? gasto / r.total * 100 : 0) + "%"; bar.style.background = gasto > prev && prev ? "var(--bad)" : catColor(c.id); tr.appendChild(bar);
+    var tr = el("div", "track"); var bar = el("i"); bar.style.width = Math.min(100, prev ? gasto / prev * 100 : r.total ? gasto / r.total * 100 : 0) + "%"; bar.style.background = Math.round((gasto - prev) * 100) > 0 && prev ? "var(--bad)" : catColor(c.id); tr.appendChild(bar);
     mid.appendChild(tr);
     row.appendChild(mid);
-    var val = el("div", "val" + (gasto > prev && prev ? " over" : ""), brl(gasto)); if (prev) val.appendChild(el("small", null, "de " + brl(prev)));
+    var val = el("div", "val" + (Math.round((gasto - prev) * 100) > 0 && prev ? " over" : ""), brl(gasto)); if (prev) val.appendChild(el("small", null, "de " + brl(prev)));
     row.appendChild(val);
     cats.appendChild(row);
   });
@@ -1876,15 +1876,15 @@ function renderPainel(main, v) {
     var ic = el("span", "cic"); ic.style.background = "var(--accent)"; ic.appendChild(svgIc(gr.ic, 18)); row.appendChild(ic);
     var mid = el("div");
     var nm = el("div", "nm"); nm.appendChild(el("b", null, gr.nome)); nm.appendChild(el("span", "num", li ? Math.round(usado / li * 100) + "%" : "sem limite")); mid.appendChild(nm);
-    if (li) { var tr = el("div", "track"); var bar = el("i"); bar.style.width = Math.min(100, usado / li * 100) + "%"; bar.style.background = usado > li ? "var(--bad)" : "var(--accent)"; tr.appendChild(bar); mid.appendChild(tr); }
-    if (li && gr.id === "dinheiro") mid.appendChild(el("div", "hint num", usado > li ? "Passou " + brl(usado - li) + " do dinheiro levado" : "Restam " + brl(li - usado) + " em dinheiro"));
-    if (li && gr.id === "credito") mid.appendChild(el("div", "hint num", usado > li ? "Passou " + brl(usado - li) + " do limite planejado" : "Restam " + brl(li - usado) + " no limite planejado"));
+    if (li) { var tr = el("div", "track"); var bar = el("i"); bar.style.width = Math.min(100, usado / li * 100) + "%"; bar.style.background = Math.round((usado - li) * 100) > 0 ? "var(--bad)" : "var(--accent)"; tr.appendChild(bar); mid.appendChild(tr); }
+    if (li && gr.id === "dinheiro") mid.appendChild(el("div", "hint num", Math.round((usado - li) * 100) > 0 ? "Passou " + brl(usado - li) + " do dinheiro levado" : "Restam " + brl(li - usado) + " em dinheiro"));
+    if (li && gr.id === "credito") mid.appendChild(el("div", "hint num", Math.round((usado - li) * 100) > 0 ? "Passou " + brl(usado - li) + " do limite planejado" : "Restam " + brl(li - usado) + " no limite planejado"));
     if (gr.id === "conta" && usado) {
       var px = 0, db = 0; Store.gastos.forEach(function (g) { if (g.pagamento === "pix") px += g.valorBRL || 0; else if (g.pagamento === "debito") db += g.valorBRL || 0; });
       mid.appendChild(el("div", "hint num", "Pix " + brl(px) + " · Débito " + brl(db)));
     }
     row.appendChild(mid);
-    var val = el("div", "val" + (li && usado > li ? " over" : ""), brl(usado)); if (li) val.appendChild(el("small", null, "de " + brl(li))); row.appendChild(val);
+    var val = el("div", "val" + (li && Math.round((usado - li) * 100) > 0 ? " over" : ""), brl(usado)); if (li) val.appendChild(el("small", null, "de " + brl(li))); row.appendChild(val);
     lpg.appendChild(row);
   });
   if (semPag) { var rn = el("div", "catrow"); var icn = el("span", "cic"); icn.style.background = "var(--c-outros)"; icn.appendChild(svgIc(CAT.outros.ic, 18)); rn.appendChild(icn); var mn = el("div"); mn.appendChild(el("div", "nm")).appendChild(el("b", null, "Não informado")); rn.appendChild(mn); rn.appendChild(el("div", "val", brl(semPag))); lpg.appendChild(rn); }
