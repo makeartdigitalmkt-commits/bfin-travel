@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261112-185221">
+<meta name="build" content="20261113-164302">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -390,6 +390,21 @@
     .tabs .tlong { display: none; }
   }
 
+  /* Pessoas e acerto de contas */
+  .pchips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+  .pchip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 6px 6px 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--accent); font-weight: 700; font-size: 14px; }
+  .pchip button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .prow { display: flex; gap: 8px; }
+  .prow input { flex: 1; min-width: 0; min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: inherit; padding: 0 12px; font: inherit; font-size: 16px; }
+  .acts { display: grid; gap: 8px; margin: 4px 0 12px; }
+  .act, .actok { margin: 0; padding: 12px 14px; border-radius: 14px; background: rgba(100, 214, 189, 0.12); border: 1px solid rgba(100, 214, 189, 0.35); font-size: 15px; }
+  .act b.num { color: var(--accent); }
+  .acrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .acrow > div:first-child { min-width: 0; }
+  .acrow .val { flex: none; display: grid; justify-items: end; font-weight: 800; white-space: nowrap; }
+  .acrow .val small { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .acrow .val.over { color: var(--bad); }
+
   /* Entrada do app */
   .login { max-width: 520px; margin: 24px auto; display: grid; gap: 14px; justify-items: center; text-align: center; padding: 36px 28px; }
   .loginlogo { width: 112px; height: 112px; border-radius: 28px; display: grid; place-items: center; background: radial-gradient(circle at 30% 20%, #17463f, #0a121b); box-shadow: 0 0 40px rgba(100, 214, 189, 0.25); }
@@ -404,6 +419,15 @@
   html, body { overscroll-behavior-y: contain; }
   .foot .nw { white-space: nowrap; }
   @media (max-width: 560px) { .foot .nw { display: block; } }
+  .faq { display: grid; gap: 14px; margin-top: 12px; }
+  .faqsec { display: grid; gap: 6px; }
+  .faq details { border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); padding: 0 14px; }
+  .faq summary { cursor: pointer; font-weight: 700; padding: 13px 0; list-style: none; display: flex; justify-content: space-between; gap: 10px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--accent); font-size: 20px; line-height: 1; }
+  .faq details[open] summary::after { content: "−"; }
+  .faq details p { margin: 0 0 14px; color: var(--muted); line-height: 1.5; }
+  .faqrod { display: grid; gap: 6px; margin-top: 16px; }
   .plink { color: var(--accent); font-weight: 700; font-size: 14px; text-decoration: none; }
   body { margin: 0; }
 </style>
@@ -425,6 +449,7 @@
         <select id="fonteSel" aria-label="De quem são os dados" hidden></select>
         <select id="tripSel" aria-label="Escolher viagem" hidden></select>
         <button type="button" class="ghost" id="instalarBtn" hidden>Instalar app</button>
+        <button type="button" class="themebtn" id="ajudaBtn" aria-label="Ajuda" title="Ajuda"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="17" r="1.1" fill="currentColor"/></svg></button>
         <button type="button" class="themebtn" id="contaBtn" aria-label="Conta e acesso" title="Conta e acesso"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
         <button type="button" class="themebtn" id="temaBtn" aria-label="Tema"></button>
         <button type="button" class="ghost" id="novaViagem">+ Nova viagem</button>
@@ -600,6 +625,7 @@ function exportarExcel(v, gs, agrupar) {
       sub += g.valorBRL || 0;
       linhas.push({ "Data": fmtData(g.data) + "/" + g.data.slice(0, 4), "Descrição": g.descricao || "", "Local": g.local || "", "Categoria": (CAT[g.categoria] || CAT.outros).nome,
         "Pagamento": g.pagamento ? PAGM[g.pagamento].nome : "", "Valor original": g.valor, "Moeda": g.moeda || "BRL", "Valor em R$": g.valorBRL || 0 });
+      if (v.pessoas && v.pessoas.length >= 2) { var pp = v.pessoas.filter(function (p) { return p.id === g.pagou; })[0]; linhas[linhas.length - 1]["Pago por"] = pp ? pp.nome : ""; }
     });
     fechar();
     var wb = XLSX.utils.book_new();
@@ -771,7 +797,10 @@ var GD = {
   sair: function () {
     try { if (GD.token) google.accounts.oauth2.revoke(GD.token, function () {}); } catch (e) {}
     GD.token = null; GD.minha = null; GD.fontes = []; GD.abas = {};
-    try { ["carteira-email", "carteira-nome", "carteira-fonte", "carteira-viagem", "carteira-sessao"].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+    try {
+      ["carteira-email", "carteira-nome", "carteira-fonte", "carteira-viagem", "carteira-sessao", "carteira-fila"].forEach(function (k) { localStorage.removeItem(k); });
+      Object.keys(localStorage).forEach(function (k) { if (k.indexOf("carteira-cache") === 0) localStorage.removeItem(k); });
+    } catch (e) {}
   },
 
   /* ---- Chamadas às APIs do Google ---- */
@@ -779,7 +808,7 @@ var GD = {
     op = op || {};
     if (!GD.token || Date.now() > GD.exp) { GD.expirou = true; try { localStorage.removeItem("carteira-sessao"); } catch (e) {} return Promise.reject(new Error("Sua sessão expirou. Toque em Continuar para entrar de novo.")); }
     var h = { Authorization: "Bearer " + GD.token }; if (op.body) h["Content-Type"] = "application/json";
-    return fetch(url, { method: op.method || "GET", headers: h, body: op.body ? JSON.stringify(op.body) : undefined }).then(function (r) {
+    return fetch(url, { method: op.method || "GET", headers: h, body: op.body ? JSON.stringify(op.body) : undefined }).catch(function () { var e = new Error("Sem internet agora."); e.rede = true; throw e; }).then(function (r) {
       if (r.status === 401) { GD.expirou = true; try { localStorage.removeItem("carteira-sessao"); } catch (e) {} throw new Error("Sua sessão expirou. Toque em Continuar para entrar de novo."); }
       if (r.status === 429) throw new Error("Muitos pedidos agora. Espere um minuto e tente de novo.");
       if (r.status === 403) return r.text().then(function (t) {
@@ -1011,10 +1040,15 @@ function fazerLogin(prompt) {
 function renovarSessao() {
   GD.entrar("").then(function () { GD.expirou = false; toast("Sessão renovada"); Store.carregarFonte(); }).catch(function (e) { toast(e.message); });
 }
-function sairDoApp() { GD.sair(); fecharFolha(); Store.modo = "login"; Store.viagens = []; Store.gastos = []; Store.lugares = []; Store.fontes = []; Store.viagemId = null; render(); }
+var confirmouSair = false;
+function sairDoApp() {
+  var n = filaLer().length;
+  if (n && !confirmouSair) { confirmouSair = true; toast(n + " alteração(ões) ainda não enviada(s). Conecte-se à internet antes de sair, ou toque em Sair de novo para descartar."); return; }
+  confirmouSair = false; GD.sair(); fecharFolha(); Store.modo = "login"; Store.viagens = []; Store.gastos = []; Store.lugares = []; Store.fontes = []; Store.viagemId = null; render(); }
 function appBoot() {
   Store.gisPronto = false;
   var retomou = appConfigurado && GD.retomarSessao();
+  if (!retomou && appConfigurado && temCache()) { GD.expirou = true; retomou = true; }
   if (retomou) { Store.modo = "carregando"; render(); Store.iniciar(); }
   else { Store.modo = "login"; render(); }
   if (!appConfigurado) return;
@@ -1084,7 +1118,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261112-185221";
+var BUILD = "20261113-164302";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1110,6 +1144,158 @@ setTimeout(checarVersao, 2500);
 document.addEventListener("visibilitychange", function () { if (!document.hidden) checarVersao(); });
 setInterval(checarVersao, 300000);
 
+
+/* ---------- Sem internet: fila de envio e cópia dos dados no celular ---------- */
+var FILA_K = "carteira-fila", enviandoFila = false;
+function lsLer(k, padrao) { try { var x = localStorage.getItem(k); return x ? JSON.parse(x) : padrao; } catch (e) { return padrao; } }
+function lsGravar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function filaLer() { return lsLer(FILA_K, []); }
+function filaPendentes() { return filaLer().filter(function (x) { return x.fonte === Store.fonte; }).length; }
+function errRede(e) { return !!(e && e.rede) || !navigator.onLine || (typeof GD !== "undefined" && GD.expirou); }
+function filaPor(item) {
+  var f = filaLer();
+  var id = item.args && item.args[0] && item.args[0].id;
+  if (id && /^salvar(Gasto|Lugar|Viagem)$/.test(item.fn)) f = f.filter(function (x) { return !(x.fn === item.fn && x.fonte === item.fonte && x.args[0] && x.args[0].id === id); });
+  f.push(item); lsGravar(FILA_K, f);
+}
+function filaTirar(t) { lsGravar(FILA_K, filaLer().filter(function (x) { return x.t !== t; })); }
+/* Gravação na planilha: sem internet (ou com a sessão vencida), guarda no celular e envia depois. */
+function guardarCopia() {
+  if (Store.modo !== "gas" || !Store.fonte || !Store.tudo) return;
+  lsGravar("carteira-cache-" + Store.fonte, { nivel: Store.nivel, viagens: Store.viagens, gastos: Store.tudo.gastos, lugares: Store.tudo.lugares });
+}
+function filaGas(fn, args) {
+  guardarCopia();
+  var item = { fonte: Store.fonte, fn: fn, args: args, t: Date.now() + Math.random() };
+  if (filaLer().length) { filaPor(item); render(); filaEnviar(); return Promise.resolve(); }
+  return chamar(fn, [Store.fonte].concat(args)).catch(function (e) {
+    if (errRede(e)) {
+      filaPor(item); render();
+      toast(!navigator.onLine || e.rede ? "Sem internet: guardado no celular. Envio quando a conexão voltar." : "Guardado no celular. Envio quando você tocar em Continuar.");
+      return;
+    }
+    toast((e && e.message) || "Não consegui salvar na planilha."); Store.carregarFonte(); throw e;
+  });
+}
+function filaEnviar() {
+  if (enviandoFila || !navigator.onLine || GD.expirou || !GD.token) return;
+  var f = filaLer(); if (!f.length) return;
+  enviandoFila = true; render();
+  var x = f[0];
+  chamar(x.fn, [x.fonte].concat(x.args)).then(function () {
+    filaTirar(x.t); enviandoFila = false;
+    if (filaLer().length) filaEnviar(); else { toast("Tudo enviado para a planilha"); render(); }
+  }).catch(function (e) {
+    enviandoFila = false;
+    if (errRede(e)) { render(); return; }
+    filaTirar(x.t); toast("Uma alteração não pôde ser enviada: " + ((e && e.message) || "erro")); render(); filaEnviar();
+  });
+}
+/* Aplica o que ainda está na fila por cima dos dados lidos da planilha. */
+function aplicarFila(d, fonte) {
+  d = { nivel: d.nivel, viagens: (d.viagens || []).slice(), gastos: (d.gastos || []).slice(), lugares: (d.lugares || []).slice() };
+  var por = function (lista, o) { d[lista] = d[lista].filter(function (y) { return y.id !== o.id; }).concat([o]); };
+  var sem = function (lista, id) { d[lista] = d[lista].filter(function (y) { return y.id !== id; }); };
+  filaLer().forEach(function (x) {
+    if (x.fonte !== fonte) return;
+    var a = x.args || [];
+    if (x.fn === "salvarViagem") por("viagens", a[0]);
+    else if (x.fn === "salvarGasto") por("gastos", a[0]);
+    else if (x.fn === "salvarLugar") por("lugares", a[0]);
+    else if (x.fn === "apagarGasto") sem("gastos", a[0]);
+    else if (x.fn === "apagarLugar") sem("lugares", a[0]);
+    else if (x.fn === "apagarViagem") { sem("viagens", a[0]); d.gastos = d.gastos.filter(function (g) { return g.viagemId !== a[0]; }); d.lugares = d.lugares.filter(function (l) { return l.viagemId !== a[0]; }); }
+    else if (x.fn === "salvarLote") { por("viagens", a[0]); (a[1] || []).forEach(function (g) { por("gastos", g); }); }
+  });
+  return d;
+}
+/* Leitura com sucesso: guarda uma cópia no celular e devolve com a fila aplicada. */
+function cacheDados(d) { lsGravar("carteira-cache-" + Store.fonte, d); setTimeout(filaEnviar, 300); return aplicarFila(d, Store.fonte); }
+/* Sem internet: usa a última cópia guardada. */
+function dadosDoCache() {
+  var d = lsLer("carteira-cache-" + Store.fonte, null); if (!d) return false;
+  d = aplicarFila(d, Store.fonte);
+  Store.carregando = false; Store.nivel = d.nivel;
+  Store.viagens = d.viagens.sort(function (a, b) { return (b.ida || "").localeCompare(a.ida || ""); });
+  Store.tudo = { gastos: d.gastos, lugares: d.lugares };
+  Store.escolher(Store.viagemId || pref("viagem"));
+  return true;
+}
+function guardarInicio(r) { lsGravar("carteira-cache-ini", { email: r.email, fontes: r.fontes }); }
+function inicioDoCache() {
+  var c = lsLer("carteira-cache-ini", null); if (!c || !c.fontes || !c.fontes.length) return false;
+  GD.email = GD.email || c.email; GD.fontes = c.fontes; GD.minha = c.fontes[0].id;
+  Store.modo = "gas"; Store.email = c.email; Store.fontes = c.fontes;
+  var f = pref("fonte"); Store.fonte = c.fontes.some(function (x) { return x.id === f; }) ? f : c.fontes[0].id;
+  Store.carregarFonte(); return true;
+}
+function temCache() { var c = lsLer("carteira-cache-ini", null); return !!(c && c.fontes && c.fontes.length && pref("email")); }
+window.addEventListener("online", function () { render(); if (typeof GD !== "undefined" && GD.token && !GD.expirou) { if (filaLer().length) filaEnviar(); else if (Store.modo === "gas") Store.carregarFonte(); } });
+window.addEventListener("offline", function () { render(); });
+setInterval(function () { if (filaLer().length) filaEnviar(); }, 30000);
+
+/* ---------- Ajuda ---------- */
+var AJUDA = [
+  ["Primeiros passos", [
+    ["Como começo?", "Toque em + Nova viagem, preencha para onde vai, as datas e quanto tem para gastar. Depois, a cada gasto, toque em Lançar gasto."],
+    ["Onde ficam meus dados?", "Numa planilha chamada \"BFin Travel – dados\", no seu Google Drive. O app só acessa os arquivos que ele mesmo cria. Para abrir a planilha, toque no ícone de pessoa no topo."],
+    ["Como instalo no celular?", "Android: abra o app no Chrome, toque em ⋮ e em Instalar app. iPhone: abra no Safari, toque em Compartilhar e em Adicionar à Tela de Início."]
+  ]],
+  ["Viagem e orçamento", [
+    ["O que é \"o que entra no valor\"?", "Na Nova viagem (ou na aba Orçamento), marque se o valor que você tem cobre a ida e volta e a hospedagem. Desmarque o que já foi pago à parte, ou a hospedagem se vai ficar na casa de alguém. O que fica à parte aparece separado no painel."],
+    ["Como dividir o orçamento por categoria?", "Na aba Orçamento, escolha: Não dividir, Automático, Eu defino em % ou Eu defino em R$. No Painel, Por categoria mostra só as categorias em que você já gastou."],
+    ["O dinheiro acabou. Como coloco mais?", "Na aba Orçamento, toque em + Adicionar dinheiro ao orçamento. Fica registrado no histórico."],
+    ["Como mudo nome, datas ou valores da viagem?", "Toque em Editar viagem, logo abaixo do nome da viagem no topo."],
+    ["Viagem para fora do Brasil", "Na Nova viagem, escolha a moeda do destino. O app busca a cotação do dia, e você pode trocar pelo valor que pagou na casa de câmbio. Os gastos são convertidos para real."]
+  ]],
+  ["Gastos", [
+    ["Como lanço um gasto?", "Toque no botão verde Lançar gasto. Digite só números (8750 vira 87,50), escolha como pagou e a categoria. Descrição e local são opcionais."],
+    ["Errei um gasto. Como corrijo?", "Toque no gasto na lista para editar ou apagar."],
+    ["Dinheiro, crédito e conta: qual a diferença?", "Dinheiro em espécie é o que você leva. Cartão de crédito vai para a fatura. Pix e débito saem do saldo da conta, por isso ficam juntos em Conta (Pix e débito). Na aba Orçamento, você pode definir um limite para cada um."],
+    ["Fiquei sem internet", "Pode lançar normalmente. Os gastos ficam guardados no celular e vão sozinhos para a planilha quando a conexão voltar. Um aviso no topo mostra quantos estão esperando."],
+    ["Como baixo o relatório?", "Na aba Gastos, use os Filtros se quiser, e toque em Baixar PDF ou Baixar Excel. O relatório sai com o que está filtrado na tela."]
+  ]],
+  ["Dividir com outras pessoas", [
+    ["Como funciona o \"Quem pagou?\"", "Em Editar viagem, na parte Quem vai na viagem, adicione os nomes. A partir daí, cada gasto pergunta quem pagou e entre quem dividir. No Painel, o Acerto de contas mostra quem deve para quem. Se não adicionar ninguém, nada disso aparece."],
+    ["Como minha esposa ou um amigo vê minhas viagens?", "Toque no ícone de pessoa, em Quem pode acessar os seus dados, digite o e-mail Google da pessoa e escolha Ver e editar ou Só ver. A pessoa entra no BFin Travel com a conta dela, toca no ícone de pessoa e em Abrir dados compartilhados comigo."],
+    ["Quero que alguém use com os próprios dados", "Mande o link do app. Cada pessoa que entra com a conta Google dela ganha a própria planilha. Não precisa cadastrar ninguém."]
+  ]],
+  ["Problemas comuns", [
+    ["Apareceu \"O Google não verificou este app\"", "É normal. Toque em Avançado e em Acessar BFin Travel."],
+    ["\"Não consegui abrir seus dados\"", "Toque no ícone de pessoa, em Sair desta conta, e entre de novo. Na tela de permissões, deixe marcada a caixa do Google Drive."],
+    ["Apareceu \"Sua sessão expirou\"", "O Google libera o acesso por cerca de 1 hora. Toque em Continuar e siga de onde parou. Nada se perde."],
+    ["O login não abre", "Abra o link direto no Chrome ou no Safari, não pelo navegador do WhatsApp, e permita pop-ups para o site."],
+    ["O app não mostra a versão nova", "Quando aparecer a faixa Nova versão disponível, toque em Atualizar. Se não aparecer, feche o app e abra de novo."]
+  ]]
+];
+function abrirAjuda() {
+  var sh = folha("Ajuda");
+  var busca = document.createElement("input"); busca.type = "search"; busca.className = "search"; busca.placeholder = "Buscar dúvida (ex.: internet, dividir, relatório)"; busca.setAttribute("aria-label", "Buscar dúvida");
+  sh.appendChild(busca);
+  var lista = el("div", "faq"); sh.appendChild(lista);
+  var vazio = el("p", "hint", "Nada encontrado. Tente outra palavra."); vazio.hidden = true; sh.appendChild(vazio);
+  var semAcento = function (s) { return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); };
+  var itens = [];
+  AJUDA.forEach(function (sec) {
+    var bloco = el("div", "faqsec"); bloco.appendChild(el("span", "lbl", sec[0]));
+    sec[1].forEach(function (q) {
+      var d = document.createElement("details"); var s = document.createElement("summary"); s.textContent = q[0]; d.appendChild(s); d.appendChild(el("p", null, q[1]));
+      bloco.appendChild(d); itens.push({ d: d, bloco: bloco, txt: semAcento(q[0] + " " + q[1]) });
+    });
+    lista.appendChild(bloco);
+  });
+  busca.addEventListener("input", function () {
+    var q = semAcento(busca.value.trim()), achou = 0;
+    itens.forEach(function (it) { var ok = !q || it.txt.indexOf(q) >= 0; it.d.hidden = !ok; if (ok) achou++; it.d.open = !!q && ok; });
+    Array.prototype.forEach.call(lista.children, function (b) { b.hidden = !Array.prototype.some.call(b.querySelectorAll("details"), function (d) { return !d.hidden; }); });
+    vazio.hidden = achou > 0;
+  });
+  var rod = el("div", "faqrod");
+  rod.appendChild(el("p", "hint", "Não achou? Fale com o desenvolvedor, Robinson Borborema."));
+  var lk = el("a", "plink", "Política de privacidade"); lk.href = "privacidade.html"; lk.target = "_blank"; lk.rel = "noopener"; rod.appendChild(lk);
+  sh.appendChild(rod);
+}
+
 /* ---------- Armazenamento ----------
    Três modos, com a mesma interface para o resto da página:
    "gas"   = Google Apps Script: cada pessoa tem a planilha dela no Drive; dados compartilhados por e-mail.
@@ -1131,10 +1317,10 @@ var Store = {
   iniciar: function () {
     if (GAS) {
       chamar("iniciar").then(function (r) {
-        Store.modo = "gas"; Store.email = r.email; Store.fontes = r.fontes;
+        Store.modo = "gas"; Store.email = r.email; Store.fontes = r.fontes; if (typeof GD !== "undefined") guardarInicio(r);
         var f = pref("fonte"); Store.fonte = Store.fontes.some(function (x) { return x.id === f; }) ? f : Store.fontes[0].id;
         Store.carregarFonte();
-      }).catch(function (e) { if (typeof GD !== "undefined" && GD.expirou) { GD.expirou = false; Store.modo = "login"; render(); return; } Store.modo = "erro"; Store.erro = (e && e.message) || String(e); render(); });
+      }).catch(function (e) { if (typeof GD !== "undefined" && errRede(e) && inicioDoCache()) return; if (typeof GD !== "undefined" && GD.expirou) { GD.expirou = false; Store.modo = "login"; render(); return; } Store.modo = "erro"; Store.erro = (e && e.message) || String(e); render(); });
       return;
     }
     var pronto = false;
@@ -1163,13 +1349,13 @@ var Store = {
   },
   carregarFonte: function () {
     Store.modo = "gas"; Store.carregando = true; render();
-    return chamar("carregar", [Store.fonte]).then(function (d) {
+    return chamar("carregar", [Store.fonte]).then(function (d) { if (typeof GD !== "undefined") d = cacheDados(d);
       Store.carregando = false; Store.nivel = d.nivel;
       Store.viagens = d.viagens.sort(function (a, b) { return (b.ida || "").localeCompare(a.ida || ""); });
       Store.tudo = { gastos: d.gastos, lugares: d.lugares };
       pref("fonte", Store.fonte);
       Store.escolher(Store.viagemId || pref("viagem"));
-    }).catch(function (e) { Store.carregando = false; toast((e && e.message) || "Não consegui abrir esses dados."); render(); });
+    }).catch(function (e) { if (typeof GD !== "undefined" && errRede(e) && dadosDoCache()) return; Store.carregando = false; toast((e && e.message) || "Não consegui abrir esses dados."); render(); });
   },
   trocarFonte: function (id) { Store.fonte = id; Store.viagemId = null; Store.carregarFonte(); },
   escolher: function (id) {
@@ -1199,7 +1385,8 @@ var Store = {
   },
   /* Guarda de escrita e falha no servidor: avisa e recarrega para não ficar diferente da planilha. */
   gas: function (fn, args) {
-    return chamar(fn, [Store.fonte].concat(args)).catch(function (e) { toast((e && e.message) || "Não consegui salvar na planilha."); if (!(typeof GD !== "undefined" && GD.expirou)) Store.carregarFonte(); else render(); throw e; });
+    if (typeof GD !== "undefined") return filaGas(fn, args);
+    return chamar(fn, [Store.fonte].concat(args)).catch(function (e) { toast((e && e.message) || "Não consegui salvar na planilha."); Store.carregarFonte(); throw e; });
   },
   salvarViagem: function (v) {
     if (!Store.podeEditar()) return Promise.reject(SOMENTE_LEITURA);
@@ -1409,7 +1596,13 @@ function render() {
   if ($("apoioWrap")) $("apoioWrap").hidden = Store.modo !== "login";
   if (Store.modo === "login") { $("tabs").hidden = true; $("novaViagem").hidden = true; $("contaBtn").hidden = true; renderLogin(main); return; }
   $("contaBtn").hidden = false;
-  if (typeof GD !== "undefined" && GD.expirou) {
+  var nFila = typeof GD !== "undefined" ? filaPendentes() : 0;
+  if (typeof GD !== "undefined" && (!navigator.onLine || nFila)) {
+    var txf = !navigator.onLine ? "Sem internet. " + (nFila ? nFila + " alteração(ões) guardada(s) no celular, envio automático quando a conexão voltar." : "Pode lançar normalmente: os gastos ficam guardados no celular e vão para a planilha quando a conexão voltar.")
+      : GD.expirou ? nFila + " alteração(ões) guardada(s) no celular. Toque em Continuar abaixo para enviar." : "Enviando " + nFila + " alteração(ões) para a planilha…";
+    main.appendChild(el("div", "notice info", txf));
+  }
+  if (typeof GD !== "undefined" && GD.expirou && navigator.onLine) {
     var ex = el("div", "alert warn"); ex.appendChild(el("span", null, "Sua sessão do Google expirou. Toque em Continuar para seguir de onde parou."));
     var bx = el("button", "abtn", "Continuar"); bx.type = "button"; bx.onclick = renovarSessao; ex.appendChild(bx);
     var wx = el("div", "alerts"); wx.appendChild(ex); main.appendChild(wx);
@@ -1562,6 +1755,8 @@ function renderPainel(main, v) {
   g2.appendChild(c3);
   main.appendChild(g2);
 
+  var cac = cardAcerto(v); if (cac) { cac.style.marginTop = "16px"; main.appendChild(cac); }
+
   // Últimos
   var g3 = el("div", "grid g-two"); g3.style.marginTop = "16px";
   var porGrupo = {}, semPag = 0;
@@ -1636,6 +1831,8 @@ function itemGasto(g, compacto) {
   var sub = [(CAT[g.categoria] || CAT.outros).nome];
   if (g.local && g.descricao) sub.push(g.local);
   if (g.pagamento && PAGM[g.pagamento]) sub.push(PAGM[g.pagamento].nome);
+  var vq = viagemAtual(), pq = vq && vq.pessoas && vq.pessoas.length >= 2 ? vq.pessoas.filter(function (p) { return p.id === g.pagou; })[0] : null;
+  if (pq) sub.push("pago por " + pq.nome);
   if (compacto) sub.push(fmtData(g.data));
   mid.appendChild(el("div", "d", sub.join(" · ")));
   it.appendChild(mid);
@@ -2086,6 +2283,63 @@ function folha(titulo) {
   document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { fecharFolha(); document.removeEventListener("keydown", esc); } });
   return sh;
 }
+function meuNome() { var n = (typeof GD !== "undefined" && GD.nome) || (Store.user && Store.user.name) || ""; return (n.trim().split(/\s+/)[0]) || "Eu"; }
+function buscarCotacao(m) {
+  var json = function (r) { if (!r.ok) throw new Error("http"); return r.json(); };
+  return fetch("https://economia.awesomeapi.com.br/json/last/" + m + "-BRL").then(json).then(function (j) {
+    var x = j[m + "BRL"], n = x && parseFloat(x.bid); if (!(n > 0)) throw new Error("sem"); return n;
+  }).catch(function () {
+    return fetch("https://api.frankfurter.app/latest?from=" + m + "&to=BRL").then(json).then(function (j) { var n = j.rates && j.rates.BRL; if (!(n > 0)) throw new Error("sem"); return n; });
+  });
+}
+/* Quem pagou o quê: saldo de cada pessoa e quem deve para quem. */
+function calcAcerto(v) {
+  var pes = v.pessoas || []; if (pes.length < 2) return null;
+  var ids = pes.map(function (p) { return p.id; }), pagou = {}, parte = {}, semN = 0, total = 0;
+  ids.forEach(function (i) { pagou[i] = 0; parte[i] = 0; });
+  Store.gastos.forEach(function (g) {
+    var x = g.valorBRL || 0;
+    if (ids.indexOf(g.pagou) < 0) { semN++; return; }
+    total += x; pagou[g.pagou] += x;
+    var d = (g.divide && g.divide.length ? g.divide : ids).filter(function (i) { return ids.indexOf(i) >= 0; }); if (!d.length) d = ids;
+    d.forEach(function (i) { parte[i] += x / d.length; });
+  });
+  var saldo = {}; ids.forEach(function (i) { saldo[i] = Math.round((pagou[i] - parte[i]) * 100) / 100; });
+  var dev = ids.filter(function (i) { return saldo[i] < -0.004; }).map(function (i) { return { id: i, v: -saldo[i] }; }).sort(function (a, b) { return b.v - a.v; });
+  var cre = ids.filter(function (i) { return saldo[i] > 0.004; }).map(function (i) { return { id: i, v: saldo[i] }; }).sort(function (a, b) { return b.v - a.v; });
+  var trans = [], a = 0, b = 0;
+  while (a < dev.length && b < cre.length) {
+    var q = Math.round(Math.min(dev[a].v, cre[b].v) * 100) / 100;
+    if (q >= 0.01) trans.push({ de: dev[a].id, para: cre[b].id, v: q });
+    dev[a].v -= q; cre[b].v -= q;
+    if (dev[a].v < 0.01) a++; if (cre[b].v < 0.01) b++;
+  }
+  var nome = {}; pes.forEach(function (p) { nome[p.id] = p.nome; });
+  return { pes: pes, pagou: pagou, parte: parte, saldo: saldo, trans: trans, semN: semN, total: total, nome: nome };
+}
+function cardAcerto(v) {
+  var a = calcAcerto(v); if (!a) return null;
+  var c = el("div", "card acerto");
+  var h = el("h2", null, "Acerto de contas"); h.appendChild(el("small", null, "quem pagou o quê")); c.appendChild(h);
+  if (!a.total) { c.appendChild(el("p", "hint", "Ao lançar um gasto, escolha quem pagou. Aqui aparece quanto cada um pagou e quem deve para quem.")); return c; }
+  var tr = el("div", "acts");
+  if (!a.trans.length) tr.appendChild(el("p", "actok", "Tudo certo: ninguém deve nada."));
+  a.trans.forEach(function (t) {
+    var p = el("p", "act"); p.appendChild(el("b", null, a.nome[t.de])); p.appendChild(document.createTextNode(" deve ")); p.appendChild(el("b", "num", brl(t.v))); p.appendChild(document.createTextNode(" para ")); p.appendChild(el("b", null, a.nome[t.para])); tr.appendChild(p);
+  });
+  c.appendChild(tr);
+  var l = el("div", "cats");
+  a.pes.forEach(function (p) {
+    var row = el("div", "acrow");
+    var nm = el("div"); nm.appendChild(el("b", null, p.nome)); nm.appendChild(el("div", "hint num", "pagou " + brl(a.pagou[p.id]) + " · parte " + brl(a.parte[p.id]))); row.appendChild(nm);
+    var s = a.saldo[p.id];
+    var vv = el("div", "val num" + (s < -0.004 ? " over" : "")); vv.appendChild(el("small", null, Math.abs(s) < 0.005 ? "" : s > 0 ? "recebe" : "deve")); vv.appendChild(el("span", null, Math.abs(s) < 0.005 ? "em dia" : brl(Math.abs(s)))); row.appendChild(vv);
+    l.appendChild(row);
+  });
+  c.appendChild(l);
+  if (a.semN) c.appendChild(el("p", "hint", a.semN + " gasto(s) sem \"quem pagou\" não entram nessa conta. Toque no gasto para escolher."));
+  return c;
+}
 function secao(sh, n, titulo, sub) {
   var s = el("div", "secao"); s.appendChild(el("i", null, String(n)));
   var tx = el("div"); tx.appendChild(el("b", null, titulo)); if (sub) tx.appendChild(el("small", null, sub)); s.appendChild(tx);
@@ -2170,11 +2424,56 @@ function abrirViagem(v) {
   function syncCot() {
     boxC.textContent = ""; cot = null;
     if (ml.value === "BRL") return;
-    var atual = v && v.cotacoes && v.cotacoes[ml.value] ? v.cotacoes[ml.value] : MOEDAS[ml.value][2];
+    var salva = v && v.cotacoes && v.cotacoes[ml.value];
+    var atual = salva || MOEDAS[ml.value][2];
     cot = campo(boxC, "fvCot", "1 " + ml.value + " vale quantos reais", "number", atual, { step: "0.0001", min: "0", inputMode: "decimal" });
-    boxC.appendChild(el("p", "hint", "Valor de exemplo. Coloque a cotação que você pagou no câmbio ou a do dia."));
+    var moedaAgora = ml.value, campoCot = cot;
+    var info = el("p", "hint", salva ? "Cotação que você salvou nesta viagem." : "Buscando a cotação de hoje…");
+    var bb = el("button", "linkbtn", "Atualizar com a cotação de hoje"); bb.type = "button";
+    var buscar = function () {
+      info.textContent = "Buscando a cotação de hoje…"; bb.disabled = true;
+      buscarCotacao(moedaAgora).then(function (n) {
+        if (ml.value !== moedaAgora || cot !== campoCot) return;
+        campoCot.value = String(Math.round(n * 10000) / 10000);
+        info.textContent = "Cotação comercial de hoje. Se trocou dinheiro numa casa de câmbio, coloque o valor que pagou.";
+      }).catch(function () { info.textContent = navigator.onLine ? "Não consegui buscar a cotação agora. Digite a cotação que você pagou no câmbio." : "Sem internet: digite a cotação que você pagou no câmbio."; })
+        .then(function () { bb.disabled = false; });
+    };
+    bb.onclick = buscar;
+    boxC.appendChild(info); boxC.appendChild(bb);
+    if (!salva) buscar();
   }
   ml.onchange = syncCot; syncCot();
+
+  secao(sh, 5, "Quem vai na viagem", "Opcional. Para dividir os gastos e saber no fim quem deve para quem. Deixe vazio se for só você.");
+  var pessoas = (v && v.pessoas ? v.pessoas : []).map(function (p) { return { id: p.id, nome: p.nome }; });
+  var pbox = el("div", "pchips"); sh.appendChild(pbox);
+  var prow = el("div", "prow");
+  var pin = document.createElement("input"); pin.type = "text"; pin.id = "fvPessoa"; pin.placeholder = "Nome de quem vai junto"; pin.autocomplete = "off"; pin.setAttribute("aria-label", "Nome de quem vai junto");
+  var pad = el("button", "btn", "Adicionar"); pad.type = "button";
+  prow.appendChild(pin); prow.appendChild(pad); sh.appendChild(prow);
+  var usadoPor = function (id) { return v && v.id === Store.viagemId && Store.gastos.some(function (g) { return g.pagou === id || (g.divide || []).indexOf(id) >= 0; }); };
+  function desenharP() {
+    pbox.textContent = "";
+    if (!pessoas.length) { pbox.appendChild(el("p", "hint", "Só você. O \"Quem pagou?\" só aparece nos gastos se tiver mais alguém aqui.")); return; }
+    pessoas.forEach(function (p, i) {
+      var c = el("span", "pchip"); c.appendChild(el("span", null, p.nome));
+      var x = el("button", null, "×"); x.type = "button"; x.setAttribute("aria-label", "Remover " + p.nome);
+      x.onclick = function () {
+        if (usadoPor(p.id)) { toast(p.nome + " já aparece em gastos lançados. Edite esses gastos antes de remover."); return; }
+        pessoas.splice(i, 1); if (pessoas.length === 1 && pessoas[0].id === "p_eu" && !usadoPor("p_eu")) pessoas = []; desenharP();
+      };
+      c.appendChild(x); pbox.appendChild(c);
+    });
+  }
+  function addP() {
+    var n = pin.value.trim(); if (!n) { pin.focus(); return; }
+    if (!pessoas.length) pessoas.push({ id: "p_eu", nome: meuNome() });
+    if (pessoas.some(function (p) { return p.nome.toLowerCase() === n.toLowerCase(); })) { toast("Esse nome já está na lista."); return; }
+    pessoas.push({ id: novoId("p_"), nome: n }); pin.value = ""; desenharP(); pin.focus();
+  }
+  pad.onclick = addP; pin.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); addP(); } };
+  desenharP();
   var msg = el("p", "notice"); msg.hidden = true; sh.appendChild(msg);
   var sv = el("button", "btn cta", v ? "Salvar alterações" : "Criar viagem"); sv.type = "button"; sh.appendChild(sv);
   sv.onclick = function () {
@@ -2186,6 +2485,7 @@ function abrirViagem(v) {
     if (v) { var cAnt = cobre(v); if (cAnt.ida !== estCob.ida || cAnt.hosp !== estCob.hosp) { delete nv.orcCat; delete nv.orcPct; } }
     nv.orcPag = {}; GRUPOS.forEach(function (gr) { var x = valorDe(pagIn[gr.id]); if (x > 0) nv.orcPag[gr.id] = x; });
     nv.cotacoes = Object.assign({}, (v && v.cotacoes) || {}); if (cot) nv.cotacoes[ml.value] = n0(cot.value, MOEDAS[ml.value][2]);
+    if (pessoas.length >= 2) nv.pessoas = pessoas; else delete nv.pessoas;
     if (v && v.destino !== dest) delete nv.dicas;
     sv.disabled = true;
     Store.pendente = nv.id;
@@ -2213,6 +2513,29 @@ function abrirGasto(g) {
     b.onclick = function () { pag = pag === p.id ? "" : p.id; Array.prototype.forEach.call(pg.children, function (x, i) { x.setAttribute("aria-pressed", PAG[i].id === pag ? "true" : "false"); }); };
     pg.appendChild(b);
   });
+
+  var pes = v.pessoas || [], temP = pes.length >= 2, idsP = pes.map(function (p) { return p.id; });
+  var pagou = g ? (idsP.indexOf(g.pagou) >= 0 ? g.pagou : "") : (idsP.indexOf(pref("pagou-" + v.id)) >= 0 ? pref("pagou-" + v.id) : idsP[0]);
+  var divide = g && g.divide && g.divide.length ? g.divide.filter(function (i) { return idsP.indexOf(i) >= 0; }) : idsP.slice();
+  if (temP) {
+    sh.appendChild(el("span", "lbl", "Quem pagou?"));
+    var qp = el("div", "filters"); qp.setAttribute("role", "group"); qp.setAttribute("aria-label", "Quem pagou"); sh.appendChild(qp);
+    sh.appendChild(el("span", "lbl", "Dividir entre"));
+    var dv = el("div", "filters"); dv.setAttribute("role", "group"); dv.setAttribute("aria-label", "Dividir entre"); sh.appendChild(dv);
+    var dh = el("p", "hint"); sh.appendChild(dh);
+    var desenharQ = function () {
+      qp.textContent = ""; dv.textContent = "";
+      pes.forEach(function (p) {
+        var b = el("button", "fchip", p.nome); b.type = "button"; b.setAttribute("aria-pressed", pagou === p.id ? "true" : "false");
+        b.onclick = function () { pagou = p.id; desenharQ(); }; qp.appendChild(b);
+        var d = el("button", "fchip", p.nome); d.type = "button"; d.setAttribute("aria-pressed", divide.indexOf(p.id) >= 0 ? "true" : "false");
+        d.onclick = function () { var i = divide.indexOf(p.id); if (i >= 0) { if (divide.length === 1) { toast("Pelo menos uma pessoa precisa entrar na divisão."); return; } divide.splice(i, 1); } else divide.push(p.id); desenharQ(); };
+        dv.appendChild(d);
+      });
+      dh.textContent = divide.length === pes.length ? "Dividido igualmente entre todos. Toque em um nome para tirar quem não participou." : "Dividido igualmente entre " + divide.length + " pessoa(s).";
+    };
+    desenharQ();
+  }
 
   sh.appendChild(el("span", "lbl", "Categoria"));
   var cp = el("div", "catpick"); cp.setAttribute("role", "group"); cp.setAttribute("aria-label", "Categoria"); sh.appendChild(cp);
@@ -2267,6 +2590,8 @@ function abrirGasto(g) {
     var ng = { id: g ? g.id : novoId("g_"), valor: x, moeda: mo.value, cotacao: t, valorBRL: Math.round(x * t * 100) / 100, categoria: cat, pagamento: pag,
       descricao: ds.value.trim(), local: lc.value.trim(), data: data, criadoEm: g ? g.criadoEm : new Date().toISOString() };
     if (pag) pref("pag", pag);
+    if (temP) { ng.pagou = pagou; if (divide.length < pes.length) ng.divide = divide.slice(); if (pagou) pref("pagou-" + v.id, pagou); }
+    else if (g) { if (g.pagou) ng.pagou = g.pagou; if (g.divide) ng.divide = g.divide; }
     sv.disabled = true;
     Store.salvarGasto(ng).then(function () { lugarDoGasto(ng); fecharFolha(); toast(g ? "Gasto atualizado" : "Gasto lançado"); }).catch(function (e) { sv.disabled = false; erroSalvar(e); });
   };
@@ -2460,6 +2785,7 @@ function abrirConta() {
 $("contaBtn").onclick = abrirConta;
 if ($("instalarBtn")) $("instalarBtn").onclick = function () { if (!pedidoInstalar) return; pedidoInstalar.prompt(); pedidoInstalar.userChoice.then(function () { pedidoInstalar = null; $("instalarBtn").hidden = true; }); };
 if ($("apoioBtn")) $("apoioBtn").onclick = abrirApoio;
+if ($("ajudaBtn")) $("ajudaBtn").onclick = abrirAjuda;
 
 /* Tema: automático, claro ou escuro (preferência guardada neste navegador) */
 var temaHost = document.documentElement.getAttribute("data-theme");
