@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261113-164302">
+<meta name="build" content="20261113-165520">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -405,6 +405,11 @@
   .acrow .val small { font-size: 12px; font-weight: 700; color: var(--muted); }
   .acrow .val.over { color: var(--bad); }
 
+  .fimv { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; border-color: var(--accent); }
+  .fimv > div { display: grid; gap: 2px; }
+  .resimg { width: 100%; height: auto; border-radius: 18px; display: block; }
+  .resbox { margin: 8px 0 14px; }
+
   /* Entrada do app */
   .login { max-width: 520px; margin: 24px auto; display: grid; gap: 14px; justify-items: center; text-align: center; padding: 36px 28px; }
   .loginlogo { width: 112px; height: 112px; border-radius: 28px; display: grid; place-items: center; background: radial-gradient(circle at 30% 20%, #17463f, #0a121b); box-shadow: 0 0 40px rgba(100, 214, 189, 0.25); }
@@ -597,6 +602,84 @@ function carregarScript(url) {
     if (document.querySelector('script[src="' + url + '"]')) { ok(); return; }
     var s = document.createElement("script"); s.src = url; s.onload = ok; s.onerror = function () { erro({ code: "lib" }); }; document.head.appendChild(s);
   });
+}
+/* ---------- Resumo da viagem em imagem ---------- */
+function dadosResumo(v) {
+  var r = resumo(v), cats = [];
+  CATS.forEach(function (c) { var x = r.porCat[c.id] || 0; if (x) cats.push({ id: c.id, nome: c.nome, v: x }); });
+  cats.sort(function (a, b) { return b.v - a.v; });
+  var total = r.total + r.fora, diasGasto = Math.max(1, Math.min(r.dias, r.passados || r.dias));
+  return { r: r, cats: cats, total: total, media: total / r.dias, n: Store.gastos.length, dentro: r.resta >= 0, dif: Math.abs(r.resta), diasGasto: diasGasto };
+}
+function corCat(id) { var c = getComputedStyle(document.documentElement).getPropertyValue("--c-" + id).trim(); return c || "#64d6bd"; }
+function desenharResumo(v) {
+  var d = dadosResumo(v), r = d.r;
+  var W = 1080, H = 1350, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  var x = cv.getContext("2d");
+  var F = function (p, w) { return (w || 700) + " " + p + "px Manrope, Arial, sans-serif"; };
+  var g = x.createRadialGradient(W * 0.85, 80, 0, W * 0.85, 80, 700); g.addColorStop(0, "#17463f"); g.addColorStop(1, "#0a121b");
+  x.fillStyle = "#0a121b"; x.fillRect(0, 0, W, H); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  var rr = function (X, Y, w, h, rad, fill, stroke) { x.beginPath(); x.moveTo(X + rad, Y); x.arcTo(X + w, Y, X + w, Y + h, rad); x.arcTo(X + w, Y + h, X, Y + h, rad); x.arcTo(X, Y + h, X, Y, rad); x.arcTo(X, Y, X + w, Y, rad); x.closePath(); if (fill) { x.fillStyle = fill; x.fill(); } if (stroke) { x.strokeStyle = stroke; x.lineWidth = 2; x.stroke(); } };
+  var txt = function (s, X, Y, font, cor, al) { x.font = font; x.fillStyle = cor; x.textAlign = al || "left"; x.fillText(s, X, Y); };
+  var cortar = function (s, font, max) { x.font = font; if (x.measureText(s).width <= max) return s; while (s.length > 1 && x.measureText(s + "…").width > max) s = s.slice(0, -1); return s + "…"; };
+  var P = 80;
+  txt("RESUMO DA VIAGEM", P, 210, F(26, 800), "#64d6bd");
+  txt(cortar(v.destino || "Viagem", F(76, 800), W - 2 * P), P, 300, F(76, 800), "#f7f9fa");
+  txt(fmtData(v.ida) + "/" + v.ida.slice(0, 4) + " a " + fmtData(v.volta) + "/" + v.volta.slice(0, 4) + "  ·  " + r.dias + " dia(s)  ·  " + d.n + " gasto(s)", P, 356, F(30, 600), "#a9bdcc");
+  // total
+  rr(P, 400, W - 2 * P, 250, 36, "rgba(19, 58, 53, 0.9)", "#2b5a52");
+  txt("TOTAL GASTO", P + 44, 462, F(24, 800), "#64d6bd");
+  txt(brl(d.total), P + 44, 560, F(92, 800), "#f7f9fa");
+  var sit = !r.orc ? "" : d.dentro ? "Dentro do orçamento · sobrou " + brl(d.dif) : "Passou " + brl(d.dif) + " do orçamento";
+  if (r.fora) sit = (sit ? sit + "  ·  " : "") + "inclui " + brl(r.fora) + " à parte";
+  txt(cortar(sit, F(28, 700), W - 2 * P - 88), P + 44, 616, F(28, 700), !r.orc || d.dentro ? "#8fe5d2" : "#ff9f86");
+  // números
+  var bw = (W - 2 * P - 24) / 2;
+  [["Média por dia", brl(d.media)], ["Orçamento", r.orc ? brl(r.orc) : "—"]].forEach(function (k, i) {
+    var X = P + i * (bw + 24); rr(X, 680, bw, 150, 28, "#111e2c", "#22364a");
+    txt(k[0], X + 32, 734, F(24, 600), "#8ea3b5"); txt(k[1], X + 32, 796, F(46, 800), "#f7f9fa");
+  });
+  // categorias
+  rr(P, 860, W - 2 * P, 330, 28, "#111e2c", "#22364a");
+  txt("Onde mais gastou", P + 32, 912, F(28, 800), "#f7f9fa");
+  var top = d.cats.slice(0, 4), max = top.length ? top[0].v : 1;
+  top.forEach(function (c, i) {
+    var Y = 966 + i * 56, bx = P + 32, bwid = W - 2 * P - 64;
+    txt(c.nome, bx, Y, F(24, 700), "#cfdbe5"); txt(brl(c.v) + "  ·  " + Math.round(c.v / d.total * 100) + "%", bx + bwid, Y, F(24, 800), "#f7f9fa", "right");
+    rr(bx, Y + 12, bwid, 10, 5, "#1d2e40"); rr(bx, Y + 12, Math.max(12, bwid * c.v / max), 10, 5, corCat(c.id));
+  });
+  // rodapé
+  txt("Feito com BFin Travel", P, H - 82, F(28, 800), "#f7f9fa");
+  txt("Sua viagem, seus gastos, tudo sob controle.", P, H - 44, F(22, 600), "#7f93a4");
+  var logo = document.querySelector(".brand svg");
+  if (!logo) return Promise.resolve(cv);
+  return new Promise(function (ok) {
+    var im = new Image(), url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(logo)], { type: "image/svg+xml" }));
+    im.onload = function () { x.drawImage(im, P, 80, 72, 72); txt("BFin", P + 90, 130, F(38, 800), "#f7f9fa"); x.font = F(38, 800); txt("Travel", P + 90 + x.measureText("BFin ").width, 130, F(38, 800), "#64d6bd"); URL.revokeObjectURL(url); ok(cv); };
+    im.onerror = function () { URL.revokeObjectURL(url); ok(cv); };
+    im.src = url;
+  });
+}
+function abrirResumo(v) {
+  var sh = folha("Resumo da viagem");
+  var box = el("div", "resbox"); box.appendChild(el("p", "hint", "Montando o resumo…")); sh.appendChild(box);
+  var row = el("div", "row"); sh.appendChild(row);
+  var nome = "Resumo " + (v.destino || "viagem").replace(/[^\wÀ-ú ,-]/g, "").trim() + ".png";
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () { return desenharResumo(v); }).then(function (cv) {
+    box.textContent = "";
+    var im = new Image(); im.src = cv.toDataURL("image/png"); im.alt = "Resumo da viagem para " + v.destino; im.className = "resimg"; box.appendChild(im);
+    cv.toBlob(function (blob) {
+      var arq = typeof File === "function" ? new File([blob], nome, { type: "image/png" }) : null;
+      if (arq && navigator.canShare && navigator.canShare({ files: [arq] })) {
+        var bs = el("button", "btn solid", "Compartilhar"); bs.type = "button";
+        bs.onclick = function () { navigator.share({ files: [arq], title: "Resumo da viagem", text: "Minha viagem para " + v.destino + ", feita com o BFin Travel." }).catch(function () {}); };
+        row.appendChild(bs);
+      }
+      var bd = el("button", "btn", "Baixar imagem"); bd.type = "button";
+      bd.onclick = function () { salvarArquivo(nome, blob).then(function () { toast("Imagem salva"); }).catch(erroArquivo); };
+      row.appendChild(bd);
+    }, "image/png");
+  }).catch(function () { box.textContent = ""; box.appendChild(el("p", "notice", "Não consegui montar a imagem neste aparelho.")); });
 }
 function salvarArquivo(nome, blob) {
   var viaNavegador = function () {
@@ -1118,7 +1201,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261113-164302";
+var BUILD = "20261113-165520";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1253,6 +1336,7 @@ var AJUDA = [
     ["Errei um gasto. Como corrijo?", "Toque no gasto na lista para editar ou apagar."],
     ["Dinheiro, crédito e conta: qual a diferença?", "Dinheiro em espécie é o que você leva. Cartão de crédito vai para a fatura. Pix e débito saem do saldo da conta, por isso ficam juntos em Conta (Pix e débito). Na aba Orçamento, você pode definir um limite para cada um."],
     ["Fiquei sem internet", "Pode lançar normalmente. Os gastos ficam guardados no celular e vão sozinhos para a planilha quando a conexão voltar. Um aviso no topo mostra quantos estão esperando."],
+    ["Como faço o resumo da viagem?", "Quando a viagem termina, o Painel mostra Sua viagem terminou! com o botão Ver resumo. A qualquer momento, na aba Gastos, toque em Resumo em imagem. Dá para compartilhar ou baixar a imagem."],
     ["Como baixo o relatório?", "Na aba Gastos, use os Filtros se quiser, e toque em Baixar PDF ou Baixar Excel. O relatório sai com o que está filtrado na tela."]
   ]],
   ["Dividir com outras pessoas", [
@@ -1689,6 +1773,12 @@ function renderPainel(main, v) {
   if (lim0.dinheiro && din0 > lim0.dinheiro) alerta("bad", "O dinheiro levado acabou: passou " + brl(din0 - lim0.dinheiro) + ".", "Adicionar dinheiro", function () { abrirAporte(v, din0 - lim0.dinheiro, "dinheiro"); });
   CATS.forEach(function (c) { var prev = oc[c.id] || 0, gasto = r.porCat[c.id] || 0; if (prev && gasto > prev && !fora(v, c.id)) alerta("warn", c.nome + " passou " + brl(gasto - prev) + " do previsto.", "Ajustar", function () { abrirAporte(v, gasto - prev, "", c.id); }); });
   if (alertas.childNodes.length) main.appendChild(alertas);
+  if (r.fase === "depois" && Store.gastos.length) {
+    var fim = el("div", "card fimv");
+    var ft = el("div"); ft.appendChild(el("b", null, "Sua viagem terminou!")); ft.appendChild(el("span", "hint", "Veja o resumo e compartilhe como imagem.")); fim.appendChild(ft);
+    var fb = el("button", "btn solid", "Ver resumo"); fb.type = "button"; fb.onclick = function () { abrirResumo(v); }; fim.appendChild(fb);
+    main.appendChild(fim);
+  }
 
   // Destaque principal
   var hero = el("section", "prem");
@@ -1921,7 +2011,8 @@ function renderGastos(main, v) {
     var ex = el("div", "row");
     var bx = el("button", "btn", "Baixar Excel"); bx.type = "button"; bx.disabled = !gs.length; bx.onclick = function () { exportarExcel(v, ordenarExport(gs, filtro.agrupar), filtro.agrupar); };
     var bp = el("button", "btn solid", "Baixar PDF"); bp.type = "button"; bp.disabled = !gs.length; bp.onclick = function () { exportarPDF(v, ordenarExport(gs, filtro.agrupar), textoFiltros(v), filtro.agrupar); };
-    ex.appendChild(bx); ex.appendChild(bp); top.appendChild(ex);
+    var bz = el("button", "btn", "Resumo em imagem"); bz.type = "button"; bz.disabled = !Store.gastos.length; bz.onclick = function () { abrirResumo(v); };
+    ex.appendChild(bx); ex.appendChild(bp); ex.appendChild(bz); top.appendChild(ex);
     res.appendChild(top);
     var pagres = el("div", "paysum");
     PAG.forEach(function (p) { if (!r.pag[p.id]) return; var s = el("span"); s.appendChild(svgIc(p.ic, 16)); s.appendChild(document.createTextNode(p.nome + " " + brl2(r.pag[p.id]))); pagres.appendChild(s); });
