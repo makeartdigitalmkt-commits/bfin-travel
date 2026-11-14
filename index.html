@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BFin Travel: planeje quanto pode gastar na viagem e acompanhe cada gasto. Seus dados ficam no seu Google Drive.">
-<meta name="build" content="20261113-182105">
+<meta name="build" content="20261114-121420">
 <meta name="theme-color" content="#0a121b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -1228,7 +1228,7 @@ function cardApoio() {
 }
 
 /* ---------- Aviso de nova versão ---------- */
-var BUILD = "20261113-182105";
+var BUILD = "20261114-121420";
 var avisouVersao = false;
 function checarVersao() {
   if (avisouVersao || location.protocol !== "https:") return;
@@ -1795,11 +1795,12 @@ function renderPainel(main, v) {
     if (rotulo) { var b = el("button", "abtn", rotulo); b.type = "button"; b.onclick = acao; a.appendChild(b); }
     alertas.appendChild(a);
   }
-  if (r.orc && r.resta < 0) alerta("bad", "Você passou " + brl(-r.resta) + " do orçamento.", "Adicionar ao orçamento", function () { abrirAporte(v, -r.resta); });
-  else if (r.orc && r.pct >= 0.9) alerta("warn", "Você já usou " + Math.round(r.pct * 100) + "% do orçamento.", "Adicionar ao orçamento", function () { abrirAporte(v, 0); });
+  var fim = r.fase === "depois"; /* viagem encerrada: sem pedir para aumentar o orçamento nem avisar "quase no limite" */
+  if (r.orc && r.resta < 0) alerta("bad", "Você passou " + brl(-r.resta) + " do orçamento.", fim ? "" : "Adicionar ao orçamento", function () { abrirAporte(v, -r.resta); });
+  else if (r.orc && r.pct >= 0.9 && !fim) alerta("warn", "Você já usou " + Math.round(r.pct * 100) + "% do orçamento.", "Adicionar ao orçamento", function () { abrirAporte(v, 0); });
   var lim0 = v.orcPag || {}, din0 = 0; Store.gastos.forEach(function (g) { if (grupoDe(g) === "dinheiro") din0 += g.valorBRL || 0; });
-  if (lim0.dinheiro && Math.round((din0 - lim0.dinheiro) * 100) > 0) alerta("bad", "O dinheiro levado acabou: passou " + brl(din0 - lim0.dinheiro) + ".", "Adicionar dinheiro", function () { abrirAporte(v, din0 - lim0.dinheiro, "dinheiro"); });
-  CATS.forEach(function (c) { var prev = oc[c.id] || 0, gasto = r.porCat[c.id] || 0; if (prev && Math.round((gasto - prev) * 100) > 0 && !fora(v, c.id)) alerta("warn", c.nome + " passou " + brl(gasto - prev) + " do previsto.", "Ajustar", function () { abrirAporte(v, gasto - prev, "", c.id); }); });
+  if (lim0.dinheiro && Math.round((din0 - lim0.dinheiro) * 100) > 0) alerta("bad", "O dinheiro levado acabou: passou " + brl(din0 - lim0.dinheiro) + ".", fim ? "" : "Adicionar dinheiro", function () { abrirAporte(v, din0 - lim0.dinheiro, "dinheiro"); });
+  CATS.forEach(function (c) { var prev = oc[c.id] || 0, gasto = r.porCat[c.id] || 0; if (prev && Math.round((gasto - prev) * 100) > 0 && !fora(v, c.id)) alerta("warn", c.nome + " passou " + brl(gasto - prev) + " do previsto.", fim ? "" : "Ajustar", function () { abrirAporte(v, gasto - prev, "", c.id); }); });
   if (alertas.childNodes.length) main.appendChild(alertas);
   if (r.fase === "depois" && Store.gastos.length) {
     var fim = el("div", "card fimv");
@@ -1822,6 +1823,7 @@ function renderPainel(main, v) {
   esq.appendChild(stack);
   var st;
   if (r.resta < 0) st = el("span", "status bad", "Orçamento estourado");
+  else if (r.fase === "depois") st = el("span", "status good", r.resta > 0 ? "Viagem encerrada · sobraram " + brl(r.resta) : "Viagem encerrada · fechou no orçamento");
   else if (r.projecao !== null && r.projecao > r.orc) st = el("span", "status warn", "No ritmo atual, passa " + brl(r.projecao - r.orc));
   else if (r.projecao !== null) st = el("span", "status good", "No ritmo atual, sobram " + brl(r.orc - r.projecao));
   else st = el("span", "status good", r.fase === "antes" ? "A viagem ainda não começou" : "Dentro do orçamento");
@@ -1832,7 +1834,7 @@ function renderPainel(main, v) {
   function tile(l, val, s, ruim) { var x = el("div", "ptile"); x.appendChild(el("span", "l", l)); x.appendChild(el("span", "v num" + (ruim ? " ruim" : ""), val)); if (s) x.appendChild(el("span", "s", s)); dir.appendChild(x); }
   tile("Pode gastar por dia", r.fase === "depois" ? "—" : brl(Math.max(0, r.porDiaLivre)), r.fase === "depois" ? "viagem encerrada" : (r.fase === "antes" ? r.dias : r.restantes) + " dia(s) pela frente");
   tile("Média por dia", r.passados ? brl(r.media) : "—", r.passados ? "durante a viagem" : "conta a partir do 1º dia");
-  tile("Projeção do total", r.projecao !== null ? brl(r.projecao) : brl(r.total), r.projecao !== null ? "se mantiver o ritmo" : "já pago antes: " + brl(r.antes), r.projecao !== null && r.projecao > r.orc);
+  if (r.fase === "depois") tile("Total da viagem", brl(r.total), "viagem encerrada", r.resta < 0); else tile("Projeção do total", r.projecao !== null ? brl(r.projecao) : brl(r.total), r.projecao !== null ? "se mantiver o ritmo" : "já pago antes: " + brl(r.antes), r.projecao !== null && r.projecao > r.orc);
   tile("Gastos lançados", String(Store.gastos.length), "maior: " + (Store.gastos.length ? brl(Math.max.apply(null, Store.gastos.map(function (g) { return g.valorBRL || 0; }))) : "—"));
   hero.appendChild(dir);
   main.appendChild(hero);
